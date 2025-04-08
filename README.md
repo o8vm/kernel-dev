@@ -3,7 +3,7 @@
 ## 1. Prerequisites
 ### Clone the kernel source 
 ```shell
-git clone git://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git --depth 1 -b v6.13.9
+git clone git://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git --depth 1 -b v6.14
 ```
 
 ### Install the necessary tools
@@ -21,7 +21,7 @@ LIBRARY_PATH="$(brew --prefix openssl)/lib"
 ## 2. Apply the patch
 ```shell
 cd linux
-patch < /path/to/mac_patch_6-13-9.patch
+patch < /path/to/mac_patch_6-14.patch
 ```
 
 ## 3. Build the kernel
