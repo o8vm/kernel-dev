@@ -8,12 +8,12 @@ git clone git://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git --depth
 
 ### Install the necessary tools
 ```shell
-brew install clang-format llvm lld make openssl pkg-config
+brew install clang-format llvm lld make openssl pkg-config coreutils findutils gnu-tar gnu-sed gawk gnu-indent gnu-getopt grep
 ```
 
 ### Setup Environment:
 ```shell
-PATH="$HOMEBREW_PREFIX/opt/make/libexec/gnubin:$(brew --prefix llvm)/bin::$PATH"
+PATH="$(brew --prefix llvm)/bin:$HOMEBREW_PREFIX/opt/make/libexec/gnubin:$HOMEBREW_PREFIX/opt/coreutils/libexec/gnubin:$HOMEBREW_PREFIX/opt/findutils/libexec/gnubin:$HOMEBREW_PREFIX/opt/gnu-tar/libexec/gnubin:$HOMEBREW_PREFIX/opt/gnu-sed/libexec/gnubin:$HOMEBREW_PREFIX/opt/gawk/libexec/gnubin:$HOMEBREW_PREFIX/opt/gnu-indent/libexec/gnubin:$HOMEBREW_PREFIX/opt/grep/libexec/gnubin:$PATH"
 CPATH="$(brew --prefix openssl)/include"
 LIBRARY_PATH="$(brew --prefix openssl)/lib"
 ```
