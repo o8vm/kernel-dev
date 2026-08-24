@@ -94,7 +94,16 @@ jobs:
           } > checker-toolchain-report.txt
           cat checker-toolchain-report.txt
 
+      - name: Upload one-day checker artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: checker-lean-v4.33.0
+          path: checker-lean-v4.33.0.tar.zst
+          compression-level: 0
+          retention-days: 1
+
       - name: Refresh temporary release assets
+        if: always()
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
@@ -108,6 +117,7 @@ jobs:
             checker-lean-v4.33.0.tar.zst checker-toolchain-report.txt SOURCE_URL.txt
 
       - name: Commit transport report
+        if: always()
         shell: bash
         run: |
           set -euo pipefail
