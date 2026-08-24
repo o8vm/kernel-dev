@@ -17,6 +17,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+
       - name: Download, verify, and split official Lean release
         shell: bash
         run: |
@@ -43,3 +47,21 @@ jobs:
             --title 'Temporary verified Lean v4.33.0 transport' \
             --notes 'Installation transport only. Official Lean release verified before splitting. Delete after local installation.' \
             lean-4.33.0-linux.tar.zst.part-* SHA256SUMS SOURCE_URL.txt
+
+      - name: Commit deterministic transport probe
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p .toolchain-transport
+          python3 - <<'PY'
+          from pathlib import Path
+          out = Path('.toolchain-transport/probe-2MiB.bin')
+          block = bytes(range(256))
+          out.write_bytes(block * (2 * 1024 * 1024 // len(block)))
+          PY
+          sha256sum .toolchain-transport/probe-2MiB.bin > .toolchain-transport/probe-2MiB.bin.sha256
+          git config user.name 'toolchain-transport'
+          git config user.email 'actions@users.noreply.github.com'
+          git add .toolchain-transport
+          git commit -m 'ci: add temporary binary transport probe'
+          git push origin HEAD:${{ github.head_ref }}
