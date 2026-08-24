@@ -9,8 +9,11 @@ on:
 permissions:
   contents: write
 
+env:
+  TAG: temporary-lean-core-v4.33.0-20260824
+
 jobs:
-  probe-core:
+  transport-core:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
@@ -26,8 +29,9 @@ jobs:
           EXPECTED='4b3fb03c29a1e0a253fb1d11f9bae3725f19a0dc6fc09b3ea16d2c9df3349e2c'
           curl --fail --location --retry 5 --retry-all-errors "$URL" -o lean-4.33.0-linux.tar.zst
           echo "$EXPECTED  lean-4.33.0-linux.tar.zst" | sha256sum -c -
+          printf '%s\n' "$URL" > SOURCE_URL.txt
 
-      - name: Construct and test an Init-only checker
+      - name: Construct and locally smoke-test an Init-only checker
         shell: bash
         run: |
           set -euo pipefail
@@ -38,42 +42,47 @@ jobs:
           mkdir -p core/bin core/lib/lean core/include
           cp -a "$ROOT/bin/lean" core/bin/
           cp -a "$ROOT/bin/leanc" core/bin/ 2>/dev/null || true
-          find "$ROOT/lib" -maxdepth 1 \( -type f -o -type l \) \
-            \( -name '*.so' -o -name '*.so.*' \) -exec cp -a {} core/lib/ \;
+
+          # The Lean executable resolves these shared libraries relative to bin/../lib/lean.
           find "$ROOT/lib/lean" -maxdepth 1 \( -type f -o -type l \) \
-            \( -name '*.so' -o -name '*.so.*' -o -name 'Init.olean' -o -name 'Init.ilean' \) \
-            -exec cp -a {} core/lib/lean/ \;
+            \( -name '*.so' -o -name '*.so.*' \) -exec cp -a {} core/lib/lean/ \;
+
+          # Kernel checking of the project checkpoint uses only Init. Editor .ilean files,
+          # LLVM and libclang are deliberately excluded from this installation payload.
+          find "$ROOT/lib/lean" -maxdepth 1 -type f -name 'Init.olean' -exec cp -a {} core/lib/lean/ \;
           if [ -d "$ROOT/lib/lean/Init" ]; then
-            mkdir -p core/lib/lean/Init
             cd "$ROOT/lib/lean"
-            find Init -type d -print0 | while IFS= read -r -d '' d; do mkdir -p "$GITHUB_WORKSPACE/core/lib/lean/$d"; done
-            find Init \( -type f -o -type l \) \
-              \( -name '*.olean' -o -name '*.ilean' -o -name '*.so' -o -name '*.so.*' \) -print0 \
-              | while IFS= read -r -d '' f; do cp -a --parents "$f" "$GITHUB_WORKSPACE/core/lib/lean"; done
+            find Init -type d -print0 | while IFS= read -r -d '' d; do
+              mkdir -p "$GITHUB_WORKSPACE/core/lib/lean/$d"
+            done
+            find Init -type f -name '*.olean' -print0 | while IFS= read -r -d '' f; do
+              cp -a --parents "$f" "$GITHUB_WORKSPACE/core/lib/lean"
+            done
             cd "$GITHUB_WORKSPACE"
           fi
           cp -a "$ROOT/include/lean" core/include/ 2>/dev/null || true
           cp "$ROOT/LICENSE" core/ 2>/dev/null || true
+
           cat > Smoke.lean <<'EOF'
           def addTwo (n : Nat) : Nat := n + 2
           theorem addTwo_zero : addTwo 0 = 2 := by rfl
           theorem addTwo_three : addTwo 3 = 5 := by decide
           #check addTwo_three
           EOF
-          set +e
-          env LD_LIBRARY_PATH="$PWD/core/lib:$PWD/core/lib/lean" \
-            core/bin/lean --sysroot "$PWD/core" Smoke.lean > core-smoke.log 2>&1
-          SMOKE_RC=$?
-          set -e
+
+          env LD_LIBRARY_PATH="$PWD/core/lib/lean" core/bin/lean Smoke.lean \
+            > core-smoke.log 2>&1
+          core/bin/lean --version >> core-smoke.log 2>&1
+          core/bin/lean --githash >> core-smoke.log 2>&1
+
           tar --use-compress-program='zstd -19 -T0' -cf core-lean-v4.33.0.tar.zst core
           {
             echo "official_sha256=$(sha256sum lean-4.33.0-linux.tar.zst | cut -d' ' -f1)"
-            echo "core_smoke_rc=$SMOKE_RC"
+            echo 'core_smoke_rc=0'
             echo "core_uncompressed_bytes=$(du -sb core | cut -f1)"
             echo "core_archive_bytes=$(stat -c %s core-lean-v4.33.0.tar.zst)"
             echo "core_archive_sha256=$(sha256sum core-lean-v4.33.0.tar.zst | cut -d' ' -f1)"
             echo "init_olean_count=$(find core/lib/lean -name '*.olean' | wc -l)"
-            echo "init_ilean_count=$(find core/lib/lean -name '*.ilean' | wc -l)"
             echo
             echo '[smoke log]'
             cat core-smoke.log
@@ -82,11 +91,25 @@ jobs:
             ldd core/bin/lean || true
             echo
             echo '[largest files]'
-            find core -type f -printf '%s %p\n' | sort -nr | head -40
+            find core -type f -printf '%s %p\n' | sort -nr | sed -n '1,40p'
           } > core-report.txt
           cat core-report.txt
 
-      - name: Upload one-day core checker artifact
+      - name: Publish temporary public release for local installation
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh release delete "$TAG" --repo "$GITHUB_REPOSITORY" --yes --cleanup-tag || true
+          gh release create "$TAG" \
+            --repo "$GITHUB_REPOSITORY" \
+            --target toolchain/lean-v4.33.0-release-20260824 \
+            --title 'Temporary verified Lean 4.33.0 core checker' \
+            --notes 'Installation transport only. Built by pruning the checksum-verified official Lean release. Delete after local acquisition.' \
+            core-lean-v4.33.0.tar.zst core-report.txt core-smoke.log SOURCE_URL.txt
+
+      - name: Preserve as one-day Actions artifact when quota permits
         continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
@@ -95,7 +118,7 @@ jobs:
           compression-level: 0
           retention-days: 1
 
-      - name: Commit reproducible probe report
+      - name: Commit reproducible transport report
         if: always()
         shell: bash
         run: |
@@ -106,6 +129,6 @@ jobs:
           git config user.email 'actions@users.noreply.github.com'
           git add .toolchain-transport/core-report.txt .toolchain-transport/core-smoke.log
           if ! git diff --cached --quiet; then
-            git commit -m 'ci: record Init-only Lean checker probe'
+            git commit -m 'ci: record verified Init-only Lean checker payload'
             git push origin HEAD:toolchain/lean-v4.33.0-release-20260824
           fi
