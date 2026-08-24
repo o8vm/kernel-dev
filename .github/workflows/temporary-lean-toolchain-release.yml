@@ -10,13 +10,10 @@ on:
 permissions:
   contents: write
 
-env:
-  TAG: temporary-lean-v4.33.0-20260824
-
 jobs:
-  transport:
+  probe-core:
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
 
@@ -28,80 +25,85 @@ jobs:
           EXPECTED='4b3fb03c29a1e0a253fb1d11f9bae3725f19a0dc6fc09b3ea16d2c9df3349e2c'
           curl --fail --location --retry 5 --retry-all-errors "$URL" -o lean-4.33.0-linux.tar.zst
           echo "$EXPECTED  lean-4.33.0-linux.tar.zst" | sha256sum -c -
-          printf '%s\n' "$URL" > SOURCE_URL.txt
 
-      - name: Build a checker-only local toolchain payload
+      - name: Construct and test an Init-only checker
         shell: bash
         run: |
           set -euo pipefail
-          rm -rf unpack checker
-          mkdir unpack checker
+          rm -rf unpack core core-lean-v4.33.0.tar.zst Smoke.lean core-smoke.log core-report.txt
+          mkdir unpack core
           tar --use-compress-program=unzstd -xf lean-4.33.0-linux.tar.zst -C unpack
           ROOT=$(find unpack -mindepth 1 -maxdepth 1 -type d | head -n1)
-          mkdir -p checker/bin checker/lib/lean checker/include
-          cp -a "$ROOT/bin/lean" "$ROOT/bin/lake" checker/bin/
-          if [ -x "$ROOT/bin/leanc" ]; then cp -a "$ROOT/bin/leanc" checker/bin/; fi
+          mkdir -p core/bin core/lib/lean core/include
+          cp -a "$ROOT/bin/lean" core/bin/
+          cp -a "$ROOT/bin/leanc" core/bin/ 2>/dev/null || true
           find "$ROOT/lib" -maxdepth 1 \( -type f -o -type l \) \
-            \( -name '*.so' -o -name '*.so.*' \) -exec cp -a {} checker/lib/ \;
-          cd "$ROOT/lib/lean"
-          find . -type d -print0 | while IFS= read -r -d '' d; do mkdir -p "$GITHUB_WORKSPACE/checker/lib/lean/$d"; done
-          find . \( -type f -o -type l \) \
-            \( -name '*.olean' -o -name '*.ilean' -o -name '*.ir' -o -name '*.ir.sig' \
-               -o -name '*.so' -o -name '*.so.*' -o -name 'lean.mk' -o -name 'lakefile.lean' \
-               -o -name 'lake-manifest.json' \) -print0 \
-            | while IFS= read -r -d '' f; do cp -a --parents "$f" "$GITHUB_WORKSPACE/checker/lib/lean"; done
-          cd "$GITHUB_WORKSPACE"
-          cp -a "$ROOT/include/lean" checker/include/ 2>/dev/null || true
-          cp "$ROOT/LICENSE" checker/ 2>/dev/null || true
-          tar --use-compress-program='zstd -19 -T0' -cf checker-lean-v4.33.0.tar.zst checker
+            \( -name '*.so' -o -name '*.so.*' \) -exec cp -a {} core/lib/ \;
+          find "$ROOT/lib/lean" -maxdepth 1 \( -type f -o -type l \) \
+            \( -name '*.so' -o -name '*.so.*' -o -name 'Init.olean' -o -name 'Init.ilean' \) \
+            -exec cp -a {} core/lib/lean/ \;
+          if [ -d "$ROOT/lib/lean/Init" ]; then
+            mkdir -p core/lib/lean/Init
+            cd "$ROOT/lib/lean"
+            find Init -type d -print0 | while IFS= read -r -d '' d; do mkdir -p "$GITHUB_WORKSPACE/core/lib/lean/$d"; done
+            find Init \( -type f -o -type l \) \
+              \( -name '*.olean' -o -name '*.ilean' -o -name '*.so' -o -name '*.so.*' \) -print0 \
+              | while IFS= read -r -d '' f; do cp -a --parents "$f" "$GITHUB_WORKSPACE/core/lib/lean"; done
+            cd "$GITHUB_WORKSPACE"
+          fi
+          cp -a "$ROOT/include/lean" core/include/ 2>/dev/null || true
+          cp "$ROOT/LICENSE" core/ 2>/dev/null || true
+          cat > Smoke.lean <<'EOF'
+          def addTwo (n : Nat) : Nat := n + 2
+          theorem addTwo_zero : addTwo 0 = 2 := by rfl
+          theorem addTwo_three : addTwo 3 = 5 := by decide
+          #check addTwo_three
+          EOF
+          set +e
+          env LD_LIBRARY_PATH="$PWD/core/lib:$PWD/core/lib/lean" \
+            core/bin/lean --sysroot "$PWD/core" Smoke.lean > core-smoke.log 2>&1
+          SMOKE_RC=$?
+          set -e
+          tar --use-compress-program='zstd -19 -T0' -cf core-lean-v4.33.0.tar.zst core
           {
-            echo 'Official archive:'
-            stat -c 'bytes=%s' lean-4.33.0-linux.tar.zst
-            sha256sum lean-4.33.0-linux.tar.zst
+            echo "official_sha256=$(sha256sum lean-4.33.0-linux.tar.zst | cut -d' ' -f1)"
+            echo "core_smoke_rc=$SMOKE_RC"
+            echo "core_uncompressed_bytes=$(du -sb core | cut -f1)"
+            echo "core_archive_bytes=$(stat -c %s core-lean-v4.33.0.tar.zst)"
+            echo "core_archive_sha256=$(sha256sum core-lean-v4.33.0.tar.zst | cut -d' ' -f1)"
+            echo "init_olean_count=$(find core/lib/lean -name '*.olean' | wc -l)"
+            echo "init_ilean_count=$(find core/lib/lean -name '*.ilean' | wc -l)"
             echo
-            echo 'Checker selection:'
-            du -sh checker checker/bin checker/lib checker/lib/lean checker/include
-            find checker/bin -maxdepth 1 -type f -printf '%P %s bytes\n' | sort
-            find checker/lib -maxdepth 1 \( -type f -o -type l \) -printf '%P %s bytes\n' | sort
+            echo '[smoke log]'
+            cat core-smoke.log
             echo
-            echo 'Checker compressed archive:'
-            stat -c 'bytes=%s' checker-lean-v4.33.0.tar.zst
-            sha256sum checker-lean-v4.33.0.tar.zst
-          } > checker-toolchain-report.txt
-          cat checker-toolchain-report.txt
+            echo '[dynamic dependencies]'
+            ldd core/bin/lean || true
+            echo
+            echo '[largest files]'
+            find core -type f -printf '%s %p\n' | sort -nr | head -40
+          } > core-report.txt
+          cat core-report.txt
 
-      - name: Upload one-day checker artifact
-        continue-on-error: true
-        uses: actions/upload-artifact@v4
-        with:
-          name: checker-lean-v4.33.0
-          path: checker-lean-v4.33.0.tar.zst
-          compression-level: 0
-          retention-days: 1
-
-      - name: Refresh temporary release assets
-        env:
-          GH_TOKEN: ${{ github.token }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          gh release delete "$TAG" --repo "$GITHUB_REPOSITORY" --yes --cleanup-tag || true
-          gh release create "$TAG" \
-            --repo "$GITHUB_REPOSITORY" \
-            --title 'Temporary verified Lean v4.33.0 checker transport' \
-            --notes 'Installation transport only. Official Lean release verified before pruning. Delete after local installation.' \
-            checker-lean-v4.33.0.tar.zst checker-toolchain-report.txt SOURCE_URL.txt
-
-      - name: Commit transport report
+      - name: Commit reproducible probe report
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p .toolchain-transport
-          cp checker-toolchain-report.txt .toolchain-transport/
+          cp core-report.txt core-smoke.log .toolchain-transport/
           git config user.name 'toolchain-transport'
           git config user.email 'actions@users.noreply.github.com'
-          git add .toolchain-transport/checker-toolchain-report.txt
+          git add .toolchain-transport/core-report.txt .toolchain-transport/core-smoke.log
           if ! git diff --cached --quiet; then
-            git commit -m 'ci: record checker-only Lean payload size'
+            git commit -m 'ci: record Init-only Lean checker probe'
             git push origin HEAD:toolchain/lean-v4.33.0-release-20260824
           fi
+
+      - name: Preserve compressed payload when account quota permits
+        continue-on-error: true
+        uses: actions/upload-artifact@v4
+        with:
+          name: core-lean-v4.33.0
+          path: core-lean-v4.33.0.tar.zst
+          compression-level: 0
+          retention-days: 1
