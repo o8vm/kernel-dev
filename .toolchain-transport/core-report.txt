@@ -1,8 +1,8 @@
 official_sha256=4b3fb03c29a1e0a253fb1d11f9bae3725f19a0dc6fc09b3ea16d2c9df3349e2c
 core_smoke_rc=0
 core_uncompressed_bytes=612209704
-core_archive_bytes=135537813
-core_archive_sha256=9709d38a6bb7117a7bd685303e56ecf6fc0b07ab713067126d92093be51c4aac
+core_archive_bytes=135537228
+core_archive_sha256=b2532c40788c54cc44b290e733d5f12baace637013becfcbf2b13186f66b63e1
 init_olean_count=631
 init_server_sidecar_count=631
 
@@ -16,17 +16,17 @@ d8b18978322de05a8f3dba51ef03cf5461676c17
 /home/runner/work/kernel-dev/kernel-dev/core/lib/lean
 
 [dynamic dependencies]
-	linux-vdso.so.1 (0x00007fcd61c5f000)
-	libInit_shared.so => /home/runner/work/kernel-dev/kernel-dev/core/bin/../lib/lean/libInit_shared.so (0x00007fcd61c4f000)
-	libleanshared_2.so => /home/runner/work/kernel-dev/kernel-dev/core/bin/../lib/lean/libleanshared_2.so (0x00007fcd61c4b000)
-	libleanshared_1.so => /home/runner/work/kernel-dev/kernel-dev/core/bin/../lib/lean/libleanshared_1.so (0x00007fcd61c47000)
-	libleanshared.so => /home/runner/work/kernel-dev/kernel-dev/core/bin/../lib/lean/libleanshared.so (0x00007fcd58200000)
-	libc.so.6 => /lib/x86_64-linux-gnu/libc.so.6 (0x00007fcd57e00000)
-	libpthread.so.0 => /lib/x86_64-linux-gnu/libpthread.so.0 (0x00007fcd61c36000)
-	libdl.so.2 => /lib/x86_64-linux-gnu/libdl.so.2 (0x00007fcd61c31000)
-	libm.so.6 => /lib/x86_64-linux-gnu/libm.so.6 (0x00007fcd58117000)
-	/lib64/ld-linux-x86-64.so.2 (0x00007fcd61c61000)
-	librt.so.1 => /lib/x86_64-linux-gnu/librt.so.1 (0x00007fcd61c2c000)
+	linux-vdso.so.1 (0x00007f2e6fc1e000)
+	libInit_shared.so => /home/runner/work/kernel-dev/kernel-dev/core/bin/../lib/lean/libInit_shared.so (0x00007f2e6fc0e000)
+	libleanshared_2.so => /home/runner/work/kernel-dev/kernel-dev/core/bin/../lib/lean/libleanshared_2.so (0x00007f2e6fc0a000)
+	libleanshared_1.so => /home/runner/work/kernel-dev/kernel-dev/core/bin/../lib/lean/libleanshared_1.so (0x00007f2e6fc06000)
+	libleanshared.so => /home/runner/work/kernel-dev/kernel-dev/core/bin/../lib/lean/libleanshared.so (0x00007f2e66200000)
+	libc.so.6 => /lib/x86_64-linux-gnu/libc.so.6 (0x00007f2e65e00000)
+	libpthread.so.0 => /lib/x86_64-linux-gnu/libpthread.so.0 (0x00007f2e661fb000)
+	libdl.so.2 => /lib/x86_64-linux-gnu/libdl.so.2 (0x00007f2e661f6000)
+	libm.so.6 => /lib/x86_64-linux-gnu/libm.so.6 (0x00007f2e6610d000)
+	/lib64/ld-linux-x86-64.so.2 (0x00007f2e6fc20000)
+	librt.so.1 => /lib/x86_64-linux-gnu/librt.so.1 (0x00007f2e66108000)
 
 [largest files]
 229196736 core/lib/lean/libleanshared.so
