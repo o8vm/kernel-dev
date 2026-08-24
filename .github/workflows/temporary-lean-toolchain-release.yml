@@ -1,8 +1,9 @@
 name: Temporary verified Lean toolchain transport
 
 on:
-  pull_request:
-    branches: [main]
+  push:
+    branches:
+      - toolchain/lean-v4.33.0-release-20260824
     paths:
       - .github/workflows/temporary-lean-toolchain-release.yml
 
@@ -18,8 +19,6 @@ jobs:
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.head_ref }}
 
       - name: Download and verify official Lean release
         shell: bash
@@ -60,29 +59,6 @@ jobs:
             stat -c 'bytes=%s' lean-4.33.0-linux.tar.zst
             sha256sum lean-4.33.0-linux.tar.zst
             echo
-            echo 'lib/lean immediate children:'
-            du -sh "$ROOT/lib/lean"/* | sort -h
-            echo
-            echo 'lib/lean file suffix totals:'
-            python3 - "$ROOT/lib/lean" <<'PY'
-          import collections, pathlib, sys
-          root=pathlib.Path(sys.argv[1]); totals=collections.Counter(); counts=collections.Counter()
-          for p in root.rglob('*'):
-              if not p.is_file(): continue
-              name=p.name
-              if name.endswith('.ir.sig'): ext='.ir.sig'
-              elif name.endswith('.olean'): ext='.olean'
-              elif name.endswith('.ilean'): ext='.ilean'
-              elif name.endswith('.ir'): ext='.ir'
-              elif name.endswith('.c'): ext='.c'
-              elif name.endswith('.o'): ext='.o'
-              elif name.endswith('.a'): ext='.a'
-              elif '.so' in name: ext='.so*'
-              else: ext='<other>'
-              totals[ext]+=p.stat().st_size; counts[ext]+=1
-          for ext in sorted(totals): print(f'{ext}: files={counts[ext]} bytes={totals[ext]}')
-          PY
-            echo
             echo 'Checker selection:'
             du -sh checker checker/bin checker/lib checker/lib/lean checker/include
             find checker/bin -maxdepth 1 -type f -printf '%P %s bytes\n' | sort
@@ -95,6 +71,7 @@ jobs:
           cat checker-toolchain-report.txt
 
       - name: Upload one-day checker artifact
+        continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
           name: checker-lean-v4.33.0
@@ -103,7 +80,6 @@ jobs:
           retention-days: 1
 
       - name: Refresh temporary release assets
-        if: always()
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
@@ -117,7 +93,6 @@ jobs:
             checker-lean-v4.33.0.tar.zst checker-toolchain-report.txt SOURCE_URL.txt
 
       - name: Commit transport report
-        if: always()
         shell: bash
         run: |
           set -euo pipefail
@@ -128,5 +103,5 @@ jobs:
           git add .toolchain-transport/checker-toolchain-report.txt
           if ! git diff --cached --quiet; then
             git commit -m 'ci: record checker-only Lean payload size'
-            git push origin HEAD:${{ github.head_ref }}
+            git push origin HEAD:toolchain/lean-v4.33.0-release-20260824
           fi
