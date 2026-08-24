@@ -15,7 +15,7 @@ env:
 jobs:
   transport:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
         with:
@@ -31,39 +31,68 @@ jobs:
           echo "$EXPECTED  lean-4.33.0-linux.tar.zst" | sha256sum -c -
           printf '%s\n' "$URL" > SOURCE_URL.txt
 
-      - name: Measure a runtime-only local toolchain
+      - name: Build a checker-only local toolchain payload
         shell: bash
         run: |
           set -euo pipefail
-          rm -rf unpack minimal
-          mkdir unpack minimal
+          rm -rf unpack checker
+          mkdir unpack checker
           tar --use-compress-program=unzstd -xf lean-4.33.0-linux.tar.zst -C unpack
           ROOT=$(find unpack -mindepth 1 -maxdepth 1 -type d | head -n1)
-          mkdir -p minimal/bin minimal/lib
-          cp -a "$ROOT/bin/lean" "$ROOT/bin/lake" minimal/bin/
-          if [ -x "$ROOT/bin/leanc" ]; then cp -a "$ROOT/bin/leanc" minimal/bin/; fi
-          cp -a "$ROOT/lib/lean" minimal/lib/
-          find "$ROOT/lib" -maxdepth 1 -type f \( -name '*.so' -o -name '*.so.*' \) -exec cp -a {} minimal/lib/ \;
-          if [ -f "$ROOT/LICENSE" ]; then cp "$ROOT/LICENSE" minimal/; fi
-          tar --zstd -cf minimal-lean-v4.33.0.tar.zst minimal
+          mkdir -p checker/bin checker/lib/lean checker/include
+          cp -a "$ROOT/bin/lean" "$ROOT/bin/lake" checker/bin/
+          if [ -x "$ROOT/bin/leanc" ]; then cp -a "$ROOT/bin/leanc" checker/bin/; fi
+          find "$ROOT/lib" -maxdepth 1 \( -type f -o -type l \) \
+            \( -name '*.so' -o -name '*.so.*' \) -exec cp -a {} checker/lib/ \;
+          cd "$ROOT/lib/lean"
+          find . -type d -print0 | while IFS= read -r -d '' d; do mkdir -p "$GITHUB_WORKSPACE/checker/lib/lean/$d"; done
+          find . \( -type f -o -type l \) \
+            \( -name '*.olean' -o -name '*.ilean' -o -name '*.ir' -o -name '*.ir.sig' \
+               -o -name '*.so' -o -name '*.so.*' -o -name 'lean.mk' -o -name 'lakefile.lean' \
+               -o -name 'lake-manifest.json' \) -print0 \
+            | while IFS= read -r -d '' f; do cp -a --parents "$f" "$GITHUB_WORKSPACE/checker/lib/lean"; done
+          cd "$GITHUB_WORKSPACE"
+          cp -a "$ROOT/include/lean" checker/include/ 2>/dev/null || true
+          cp "$ROOT/LICENSE" checker/ 2>/dev/null || true
+          tar --use-compress-program='zstd -19 -T0' -cf checker-lean-v4.33.0.tar.zst checker
           {
             echo 'Official archive:'
             stat -c 'bytes=%s' lean-4.33.0-linux.tar.zst
             sha256sum lean-4.33.0-linux.tar.zst
             echo
-            echo 'Top-level extracted sizes:'
-            du -sh "$ROOT"/* | sort -h
+            echo 'lib/lean immediate children:'
+            du -sh "$ROOT/lib/lean"/* | sort -h
             echo
-            echo 'Minimal selection:'
-            du -sh minimal minimal/bin minimal/lib minimal/lib/lean
-            find minimal/bin -maxdepth 1 -type f -printf '%P %s bytes\n' | sort
-            find minimal/lib -maxdepth 1 -type f -printf '%P %s bytes\n' | sort
+            echo 'lib/lean file suffix totals:'
+            python3 - "$ROOT/lib/lean" <<'PY'
+          import collections, pathlib, sys
+          root=pathlib.Path(sys.argv[1]); totals=collections.Counter(); counts=collections.Counter()
+          for p in root.rglob('*'):
+              if not p.is_file(): continue
+              name=p.name
+              if name.endswith('.ir.sig'): ext='.ir.sig'
+              elif name.endswith('.olean'): ext='.olean'
+              elif name.endswith('.ilean'): ext='.ilean'
+              elif name.endswith('.ir'): ext='.ir'
+              elif name.endswith('.c'): ext='.c'
+              elif name.endswith('.o'): ext='.o'
+              elif name.endswith('.a'): ext='.a'
+              elif '.so' in name: ext='.so*'
+              else: ext='<other>'
+              totals[ext]+=p.stat().st_size; counts[ext]+=1
+          for ext in sorted(totals): print(f'{ext}: files={counts[ext]} bytes={totals[ext]}')
+          PY
             echo
-            echo 'Minimal compressed archive:'
-            stat -c 'bytes=%s' minimal-lean-v4.33.0.tar.zst
-            sha256sum minimal-lean-v4.33.0.tar.zst
-          } > minimal-toolchain-report.txt
-          cat minimal-toolchain-report.txt
+            echo 'Checker selection:'
+            du -sh checker checker/bin checker/lib checker/lib/lean checker/include
+            find checker/bin -maxdepth 1 -type f -printf '%P %s bytes\n' | sort
+            find checker/lib -maxdepth 1 \( -type f -o -type l \) -printf '%P %s bytes\n' | sort
+            echo
+            echo 'Checker compressed archive:'
+            stat -c 'bytes=%s' checker-lean-v4.33.0.tar.zst
+            sha256sum checker-lean-v4.33.0.tar.zst
+          } > checker-toolchain-report.txt
+          cat checker-toolchain-report.txt
 
       - name: Refresh temporary release assets
         env:
@@ -74,20 +103,20 @@ jobs:
           gh release delete "$TAG" --repo "$GITHUB_REPOSITORY" --yes --cleanup-tag || true
           gh release create "$TAG" \
             --repo "$GITHUB_REPOSITORY" \
-            --title 'Temporary verified Lean v4.33.0 transport' \
+            --title 'Temporary verified Lean v4.33.0 checker transport' \
             --notes 'Installation transport only. Official Lean release verified before pruning. Delete after local installation.' \
-            minimal-lean-v4.33.0.tar.zst minimal-toolchain-report.txt SOURCE_URL.txt
+            checker-lean-v4.33.0.tar.zst checker-toolchain-report.txt SOURCE_URL.txt
 
       - name: Commit transport report
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p .toolchain-transport
-          cp minimal-toolchain-report.txt .toolchain-transport/
+          cp checker-toolchain-report.txt .toolchain-transport/
           git config user.name 'toolchain-transport'
           git config user.email 'actions@users.noreply.github.com'
-          git add .toolchain-transport/minimal-toolchain-report.txt
+          git add .toolchain-transport/checker-toolchain-report.txt
           if ! git diff --cached --quiet; then
-            git commit -m 'ci: record minimal Lean toolchain size'
+            git commit -m 'ci: record checker-only Lean payload size'
             git push origin HEAD:${{ github.head_ref }}
           fi
