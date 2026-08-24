@@ -31,11 +31,11 @@ jobs:
           echo "$EXPECTED  lean-4.33.0-linux.tar.zst" | sha256sum -c -
           printf '%s\n' "$URL" > SOURCE_URL.txt
 
-      - name: Construct and diagnose an Init-only checker
+      - name: Construct and verify an Init-only checker
         shell: bash
         run: |
           set -euo pipefail
-          rm -rf unpack core core-lean-v4.33.0.tar.zst Smoke.lean core-smoke.log core-report.txt
+          rm -rf unpack core core-lean-v4.33.0.tar.zst Smoke.lean core-smoke.log core-report.txt core-smoke-passed
           mkdir unpack core
           tar --use-compress-program=unzstd -xf lean-4.33.0-linux.tar.zst -C unpack
           ROOT=$(find unpack -mindepth 1 -maxdepth 1 -type d | head -n1)
@@ -45,9 +45,7 @@ jobs:
           find "$ROOT/lib/lean" -maxdepth 1 \( -type f -o -type l \) \
             \( -name '*.so' -o -name '*.so.*' \) -exec cp -a {} core/lib/lean/ \;
 
-          # Lean 4.33 consults `.olean.server` sidecars even in batch mode.  Keep
-          # the complete Init object family, while still excluding editor `.ilean`
-          # data, LLVM and libclang from the installation payload.
+          # Lean 4.33 consults `.olean.server` sidecars even in batch mode.
           find "$ROOT/lib/lean" -maxdepth 1 -type f -name 'Init.olean*' \
             -exec cp -a {} core/lib/lean/ \;
           if [ -d "$ROOT/lib/lean/Init" ]; then
@@ -74,8 +72,8 @@ jobs:
           env LD_LIBRARY_PATH="$PWD/core/lib/lean" core/bin/lean Smoke.lean \
             > core-smoke.log 2>&1
           SMOKE_RC=$?
-          core/bin/lean --version >> core-smoke.log 2>&1
-          core/bin/lean --githash >> core-smoke.log 2>&1
+          env LD_LIBRARY_PATH="$PWD/core/lib/lean" core/bin/lean --version >> core-smoke.log 2>&1
+          env LD_LIBRARY_PATH="$PWD/core/lib/lean" core/bin/lean --githash >> core-smoke.log 2>&1
           set -e
 
           tar --use-compress-program='zstd -19 -T0' -cf core-lean-v4.33.0.tar.zst core
@@ -106,12 +104,10 @@ jobs:
           } > core-report.txt
           cat core-report.txt
 
-          if [ "$SMOKE_RC" -eq 0 ]; then
-            touch core-smoke-passed
-          fi
+          test "$SMOKE_RC" -eq 0
+          touch core-smoke-passed
 
       - name: Publish temporary public release for local installation
-        if: hashFiles('core-smoke-passed') != ''
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
@@ -126,7 +122,6 @@ jobs:
             core-lean-v4.33.0.tar.zst core-report.txt core-smoke.log SOURCE_URL.txt
 
       - name: Preserve as one-day Actions artifact when quota permits
-        if: hashFiles('core-smoke-passed') != ''
         continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
@@ -146,6 +141,6 @@ jobs:
           git config user.email 'actions@users.noreply.github.com'
           git add .toolchain-transport/core-report.txt .toolchain-transport/core-smoke.log
           if ! git diff --cached --quiet; then
-            git commit -m 'ci: record Init-only Lean checker diagnostic'
+            git commit -m 'ci: record verified Init-only Lean checker'
             git push origin HEAD:toolchain/lean-v4.33.0-release-20260824
           fi
