@@ -1,5 +1,5 @@
-# Installation transport revision 2026-08-24T20:00Z
-name: Temporary verified Lean meta overlay transport
+# Installation transport only. No project build or proof runs here.
+name: Temporary full Lean 4.33 toolchain transport
 
 on:
   pull_request:
@@ -11,9 +11,9 @@ permissions:
   contents: read
 
 jobs:
-  transport-meta:
+  transport-full-toolchain:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 30
     steps:
       - name: Download and verify official Lean release
         shell: bash
@@ -23,88 +23,46 @@ jobs:
           EXPECTED='4b3fb03c29a1e0a253fb1d11f9bae3725f19a0dc6fc09b3ea16d2c9df3349e2c'
           curl --fail --location --retry 5 --retry-all-errors "$URL" -o lean-4.33.0-linux.tar.zst
           echo "$EXPECTED  lean-4.33.0-linux.tar.zst" | sha256sum -c -
-          mkdir unpack
-          tar --use-compress-program=unzstd -xf lean-4.33.0-linux.tar.zst -C unpack
-          ROOT=$(find unpack -mindepth 1 -maxdepth 1 -type d | head -n1)
-          echo "LEAN_ROOT=$ROOT" >> "$GITHUB_ENV"
+          split --bytes=250000000 --numeric-suffixes=0 --suffix-length=2 \
+            lean-4.33.0-linux.tar.zst lean-4.33.0-linux.tar.zst.part-
+          test -f lean-4.33.0-linux.tar.zst.part-00
+          test -f lean-4.33.0-linux.tar.zst.part-01
+          test -f lean-4.33.0-linux.tar.zst.part-02
+          sha256sum lean-4.33.0-linux.tar.zst lean-4.33.0-linux.tar.zst.part-* > SHA256SUMS
+          printf '%s\n' "$URL" > SOURCE_URL.txt
+          stat -c '%n %s bytes' lean-4.33.0-linux.tar.zst.part-* | tee PART_SIZES.txt
 
-      - name: Verify the full official compiler can import Lean and Std
-        shell: bash
-        run: |
-          set -euo pipefail
-          cat > MetaSmoke.lean <<'EOF'
-          import Lean
-          import Std.Tactic.BVDecide
-          open Lean
-          theorem meta_smoke : (21 + 21 : Nat) = 42 := by decide
-          #check meta_smoke
-          EOF
-          "$LEAN_ROOT/bin/lean" MetaSmoke.lean > meta-smoke.log 2>&1
-          "$LEAN_ROOT/bin/lean" --version >> meta-smoke.log
-          "$LEAN_ROOT/bin/lean" --githash >> meta-smoke.log
-          cat meta-smoke.log
-
-      - name: Build the missing Lean/Std/Lake overlay
-        shell: bash
-        run: |
-          set -euo pipefail
-          mkdir -p overlay/bin overlay/lib/lean overlay/include
-          cp -a "$LEAN_ROOT/bin/lake" overlay/bin/ 2>/dev/null || true
-          cp -a "$LEAN_ROOT/include/lean" overlay/include/ 2>/dev/null || true
-          for module in Lean Std Lake; do
-            if [ -d "$LEAN_ROOT/lib/lean/$module" ]; then
-              cp -a "$LEAN_ROOT/lib/lean/$module" overlay/lib/lean/
-            fi
-            find "$LEAN_ROOT/lib/lean" -maxdepth 1 \( -type f -o -type l \) \
-              -name "$module.olean*" -exec cp -a {} overlay/lib/lean/ \;
-            find "$LEAN_ROOT/lib/lean" -maxdepth 1 \( -type f -o -type l \) \
-              -name "lib${module}*" -exec cp -a {} overlay/lib/lean/ \;
-          done
-          cp "$LEAN_ROOT/LICENSE" overlay/ 2>/dev/null || true
-          tar --use-compress-program='zstd -15 -T0' -cf lean-v4.33.0-meta-overlay.tar.zst overlay
-          {
-            echo 'official_archive:'
-            stat -c 'bytes=%s' lean-4.33.0-linux.tar.zst
-            sha256sum lean-4.33.0-linux.tar.zst
-            echo
-            echo 'overlay:'
-            du -sh overlay overlay/lib/lean/Lean overlay/lib/lean/Std overlay/lib/lean/Lake 2>/dev/null || true
-            stat -c 'archive_bytes=%s' lean-v4.33.0-meta-overlay.tar.zst
-            sha256sum lean-v4.33.0-meta-overlay.tar.zst
-            echo
-            echo 'counts:'
-            find overlay/lib/lean -name '*.olean' | wc -l
-            find overlay/lib/lean -name '*.olean.server' | wc -l
-          } > meta-overlay-report.txt
-          cat meta-overlay-report.txt
-
-      - name: Fetch pinned lean-sail v4 source
-        shell: bash
-        run: |
-          set -euo pipefail
-          git clone --depth 1 --branch v4 https://github.com/rems-project/lean-sail.git lean-sail-v4
-          rm -rf lean-sail-v4/.git
-          printf '%s\n' 'tag=v4' 'tree=79b4d08505af29d88b3918f32d29840fae1fa191' > lean-sail-v4/PIN.txt
-          tar --use-compress-program='zstd -15 -T0' -cf lean-sail-v4-source.tar.zst lean-sail-v4
-          sha256sum lean-sail-v4-source.tar.zst > lean-sail-v4-source.sha256
-
-      - name: Upload Lean meta overlay
+      - name: Upload part 00
         uses: actions/upload-artifact@v4
         with:
-          name: lean-v4.33.0-meta-overlay
-          path: |
-            lean-v4.33.0-meta-overlay.tar.zst
-            meta-overlay-report.txt
-            meta-smoke.log
+          name: lean-v4.33.0-full-part-00
+          path: lean-4.33.0-linux.tar.zst.part-00
           compression-level: 0
           retention-days: 1
 
-      - name: Upload lean-sail source
+      - name: Upload part 01
         uses: actions/upload-artifact@v4
         with:
-          name: lean-sail-v4-source
+          name: lean-v4.33.0-full-part-01
+          path: lean-4.33.0-linux.tar.zst.part-01
+          compression-level: 0
+          retention-days: 1
+
+      - name: Upload part 02
+        uses: actions/upload-artifact@v4
+        with:
+          name: lean-v4.33.0-full-part-02
+          path: lean-4.33.0-linux.tar.zst.part-02
+          compression-level: 0
+          retention-days: 1
+
+      - name: Upload checksums
+        uses: actions/upload-artifact@v4
+        with:
+          name: lean-v4.33.0-full-metadata
           path: |
-            lean-sail-v4-source.tar.zst
-            lean-sail-v4-source.sha256
+            SHA256SUMS
+            SOURCE_URL.txt
+            PART_SIZES.txt
           compression-level: 0
           retention-days: 1
