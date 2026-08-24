@@ -1,0 +1,32 @@
+Official archive:
+bytes=574882764
+4b3fb03c29a1e0a253fb1d11f9bae3725f19a0dc6fc09b3ea16d2c9df3349e2c  lean-4.33.0-linux.tar.zst
+
+Top-level extracted sizes:
+12K	unpack/lean-4.33.0-linux/LICENSE
+16K	unpack/lean-4.33.0-linux/share
+80K	unpack/lean-4.33.0-linux/LICENSES
+360K	unpack/lean-4.33.0-linux/include
+9.9M	unpack/lean-4.33.0-linux/bin
+34M	unpack/lean-4.33.0-linux/src
+2.9G	unpack/lean-4.33.0-linux/lib
+
+Minimal selection:
+2.9G	minimal
+lake 13840 bytes
+lean 9024 bytes
+leanc 36704 bytes
+libLLVM.so.22.1 77258216 bytes
+libatomic.so.1.2.0 26416 bytes
+libc++.so 37 bytes
+libc++.so.1.0 1337744 bytes
+libc++abi.so.1.0 408152 bytes
+libclang-cpp.so.22.1 65075176 bytes
+libgcc_s.so 132 bytes
+libgcc_s.so.1 102664 bytes
+libunwind.so.1.0 69928 bytes
+libz.so.1.2.11 100640 bytes
+
+Minimal compressed archive:
+bytes=730201845
+6d8effb1889088a7cea41ee7fd3cca3c54bde77eb91a1dd6f379836cf1b3c973  minimal-lean-v4.33.0.tar.zst
