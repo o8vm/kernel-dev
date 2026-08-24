@@ -1,3 +1,4 @@
+# Installation transport revision 2026-08-24T10:28Z
 name: Temporary verified Lean toolchain transport
 
 on:
@@ -44,8 +45,6 @@ jobs:
           cp -a "$ROOT/bin/leanc" core/bin/ 2>/dev/null || true
           find "$ROOT/lib/lean" -maxdepth 1 \( -type f -o -type l \) \
             \( -name '*.so' -o -name '*.so.*' \) -exec cp -a {} core/lib/lean/ \;
-
-          # Lean 4.33 consults `.olean.server` sidecars even in batch mode.
           find "$ROOT/lib/lean" -maxdepth 1 -type f -name 'Init.olean*' \
             -exec cp -a {} core/lib/lean/ \;
           if [ -d "$ROOT/lib/lean/Init" ]; then
@@ -95,9 +94,6 @@ jobs:
             echo
             echo '[dynamic dependencies]'
             ldd core/bin/lean || true
-            echo
-            echo '[top-level lib/lean]'
-            find core/lib/lean -maxdepth 1 -printf '%y %f -> %l\n' | sort
             echo
             echo '[largest files]'
             find core -type f -printf '%s %p\n' | sort -nr | sed -n '1,40p'
