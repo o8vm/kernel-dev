@@ -1,0 +1,36 @@
+name: Temporary lean-sail v4 source transport
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - .github/workflows/temporary-lean-sail-source.yml
+
+permissions:
+  contents: read
+
+jobs:
+  transport-source:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Acquire exact lean-sail v4 source
+        shell: bash
+        run: |
+          set -euo pipefail
+          git clone --depth=1 --branch v4 https://github.com/rems-project/lean-sail.git lean-sail
+          git -C lean-sail rev-parse HEAD | tee lean-sail.commit
+          rm -rf lean-sail/.git
+          tar --sort=name --mtime='UTC 2026-08-24' --owner=0 --group=0 --numeric-owner \
+            -czf lean-sail-v4-source.tar.gz lean-sail
+          sha256sum lean-sail-v4-source.tar.gz | tee lean-sail-v4-source.tar.gz.sha256
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: lean-sail-v4-source
+          path: |
+            lean-sail-v4-source.tar.gz
+            lean-sail-v4-source.tar.gz.sha256
+            lean-sail.commit
+          compression-level: 0
+          retention-days: 1
