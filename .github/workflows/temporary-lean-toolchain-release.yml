@@ -31,7 +31,7 @@ jobs:
           echo "$EXPECTED  lean-4.33.0-linux.tar.zst" | sha256sum -c -
           printf '%s\n' "$URL" > SOURCE_URL.txt
 
-      - name: Construct and locally smoke-test an Init-only checker
+      - name: Construct and diagnose an Init-only checker
         shell: bash
         run: |
           set -euo pipefail
@@ -42,13 +42,8 @@ jobs:
           mkdir -p core/bin core/lib/lean core/include
           cp -a "$ROOT/bin/lean" core/bin/
           cp -a "$ROOT/bin/leanc" core/bin/ 2>/dev/null || true
-
-          # The Lean executable resolves these shared libraries relative to bin/../lib/lean.
           find "$ROOT/lib/lean" -maxdepth 1 \( -type f -o -type l \) \
             \( -name '*.so' -o -name '*.so.*' \) -exec cp -a {} core/lib/lean/ \;
-
-          # Kernel checking of the project checkpoint uses only Init. Editor .ilean files,
-          # LLVM and libclang are deliberately excluded from this installation payload.
           find "$ROOT/lib/lean" -maxdepth 1 -type f -name 'Init.olean' -exec cp -a {} core/lib/lean/ \;
           if [ -d "$ROOT/lib/lean/Init" ]; then
             cd "$ROOT/lib/lean"
@@ -70,15 +65,18 @@ jobs:
           #check addTwo_three
           EOF
 
+          set +e
           env LD_LIBRARY_PATH="$PWD/core/lib/lean" core/bin/lean Smoke.lean \
             > core-smoke.log 2>&1
+          SMOKE_RC=$?
           core/bin/lean --version >> core-smoke.log 2>&1
           core/bin/lean --githash >> core-smoke.log 2>&1
+          set -e
 
           tar --use-compress-program='zstd -19 -T0' -cf core-lean-v4.33.0.tar.zst core
           {
             echo "official_sha256=$(sha256sum lean-4.33.0-linux.tar.zst | cut -d' ' -f1)"
-            echo 'core_smoke_rc=0'
+            echo "core_smoke_rc=$SMOKE_RC"
             echo "core_uncompressed_bytes=$(du -sb core | cut -f1)"
             echo "core_archive_bytes=$(stat -c %s core-lean-v4.33.0.tar.zst)"
             echo "core_archive_sha256=$(sha256sum core-lean-v4.33.0.tar.zst | cut -d' ' -f1)"
@@ -87,15 +85,27 @@ jobs:
             echo '[smoke log]'
             cat core-smoke.log
             echo
+            echo '[print prefix/libdir]'
+            env LD_LIBRARY_PATH="$PWD/core/lib/lean" core/bin/lean --print-prefix || true
+            env LD_LIBRARY_PATH="$PWD/core/lib/lean" core/bin/lean --print-libdir || true
+            echo
             echo '[dynamic dependencies]'
             ldd core/bin/lean || true
+            echo
+            echo '[top-level lib/lean]'
+            find core/lib/lean -maxdepth 1 -printf '%y %f -> %l\n' | sort
             echo
             echo '[largest files]'
             find core -type f -printf '%s %p\n' | sort -nr | sed -n '1,40p'
           } > core-report.txt
           cat core-report.txt
 
+          if [ "$SMOKE_RC" -eq 0 ]; then
+            touch core-smoke-passed
+          fi
+
       - name: Publish temporary public release for local installation
+        if: hashFiles('core-smoke-passed') != ''
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
@@ -110,6 +120,7 @@ jobs:
             core-lean-v4.33.0.tar.zst core-report.txt core-smoke.log SOURCE_URL.txt
 
       - name: Preserve as one-day Actions artifact when quota permits
+        if: hashFiles('core-smoke-passed') != ''
         continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
@@ -129,6 +140,6 @@ jobs:
           git config user.email 'actions@users.noreply.github.com'
           git add .toolchain-transport/core-report.txt .toolchain-transport/core-smoke.log
           if ! git diff --cached --quiet; then
-            git commit -m 'ci: record verified Init-only Lean checker payload'
+            git commit -m 'ci: record Init-only Lean checker diagnostic'
             git push origin HEAD:toolchain/lean-v4.33.0-release-20260824
           fi
