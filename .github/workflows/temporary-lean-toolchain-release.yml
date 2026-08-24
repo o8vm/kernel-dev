@@ -1,5 +1,5 @@
-# Installation transport revision 2026-08-24T10:28Z
-name: Temporary verified Lean toolchain transport
+# Installation transport revision 2026-08-24T20:00Z
+name: Temporary verified Lean meta overlay transport
 
 on:
   pull_request:
@@ -8,20 +8,13 @@ on:
       - .github/workflows/temporary-lean-toolchain-release.yml
 
 permissions:
-  contents: write
-
-env:
-  TAG: temporary-lean-core-v4.33.0-20260824
+  contents: read
 
 jobs:
-  transport-core:
+  transport-meta:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: toolchain/lean-v4.33.0-release-20260824
-
       - name: Download and verify official Lean release
         shell: bash
         run: |
@@ -30,113 +23,88 @@ jobs:
           EXPECTED='4b3fb03c29a1e0a253fb1d11f9bae3725f19a0dc6fc09b3ea16d2c9df3349e2c'
           curl --fail --location --retry 5 --retry-all-errors "$URL" -o lean-4.33.0-linux.tar.zst
           echo "$EXPECTED  lean-4.33.0-linux.tar.zst" | sha256sum -c -
-          printf '%s\n' "$URL" > SOURCE_URL.txt
-
-      - name: Construct and verify an Init-only checker
-        shell: bash
-        run: |
-          set -euo pipefail
-          rm -rf unpack core core-lean-v4.33.0.tar.zst Smoke.lean core-smoke.log core-report.txt core-smoke-passed
-          mkdir unpack core
+          mkdir unpack
           tar --use-compress-program=unzstd -xf lean-4.33.0-linux.tar.zst -C unpack
           ROOT=$(find unpack -mindepth 1 -maxdepth 1 -type d | head -n1)
-          mkdir -p core/bin core/lib/lean core/include
-          cp -a "$ROOT/bin/lean" core/bin/
-          cp -a "$ROOT/bin/leanc" core/bin/ 2>/dev/null || true
-          find "$ROOT/lib/lean" -maxdepth 1 \( -type f -o -type l \) \
-            \( -name '*.so' -o -name '*.so.*' \) -exec cp -a {} core/lib/lean/ \;
-          find "$ROOT/lib/lean" -maxdepth 1 -type f -name 'Init.olean*' \
-            -exec cp -a {} core/lib/lean/ \;
-          if [ -d "$ROOT/lib/lean/Init" ]; then
-            cd "$ROOT/lib/lean"
-            find Init -type d -print0 | while IFS= read -r -d '' d; do
-              mkdir -p "$GITHUB_WORKSPACE/core/lib/lean/$d"
-            done
-            find Init -type f -name '*.olean*' -print0 | while IFS= read -r -d '' f; do
-              cp -a --parents "$f" "$GITHUB_WORKSPACE/core/lib/lean"
-            done
-            cd "$GITHUB_WORKSPACE"
-          fi
-          cp -a "$ROOT/include/lean" core/include/ 2>/dev/null || true
-          cp "$ROOT/LICENSE" core/ 2>/dev/null || true
+          echo "LEAN_ROOT=$ROOT" >> "$GITHUB_ENV"
 
-          cat > Smoke.lean <<'EOF'
-          def addTwo (n : Nat) : Nat := n + 2
-          theorem addTwo_zero : addTwo 0 = 2 := by rfl
-          theorem addTwo_three : addTwo 3 = 5 := by decide
-          #check addTwo_three
-          EOF
-
-          set +e
-          env LD_LIBRARY_PATH="$PWD/core/lib/lean" core/bin/lean Smoke.lean \
-            > core-smoke.log 2>&1
-          SMOKE_RC=$?
-          env LD_LIBRARY_PATH="$PWD/core/lib/lean" core/bin/lean --version >> core-smoke.log 2>&1
-          env LD_LIBRARY_PATH="$PWD/core/lib/lean" core/bin/lean --githash >> core-smoke.log 2>&1
-          set -e
-
-          tar --use-compress-program='zstd -19 -T0' -cf core-lean-v4.33.0.tar.zst core
-          {
-            echo "official_sha256=$(sha256sum lean-4.33.0-linux.tar.zst | cut -d' ' -f1)"
-            echo "core_smoke_rc=$SMOKE_RC"
-            echo "core_uncompressed_bytes=$(du -sb core | cut -f1)"
-            echo "core_archive_bytes=$(stat -c %s core-lean-v4.33.0.tar.zst)"
-            echo "core_archive_sha256=$(sha256sum core-lean-v4.33.0.tar.zst | cut -d' ' -f1)"
-            echo "init_olean_count=$(find core/lib/lean -name '*.olean' | wc -l)"
-            echo "init_server_sidecar_count=$(find core/lib/lean -name '*.olean.server' | wc -l)"
-            echo
-            echo '[smoke log]'
-            cat core-smoke.log
-            echo
-            echo '[print prefix/libdir]'
-            env LD_LIBRARY_PATH="$PWD/core/lib/lean" core/bin/lean --print-prefix || true
-            env LD_LIBRARY_PATH="$PWD/core/lib/lean" core/bin/lean --print-libdir || true
-            echo
-            echo '[dynamic dependencies]'
-            ldd core/bin/lean || true
-            echo
-            echo '[largest files]'
-            find core -type f -printf '%s %p\n' | sort -nr | sed -n '1,40p'
-          } > core-report.txt
-          cat core-report.txt
-
-          test "$SMOKE_RC" -eq 0
-          touch core-smoke-passed
-
-      - name: Publish temporary public release for local installation
-        env:
-          GH_TOKEN: ${{ github.token }}
+      - name: Verify the full official compiler can import Lean and Std
         shell: bash
         run: |
           set -euo pipefail
-          gh release delete "$TAG" --repo "$GITHUB_REPOSITORY" --yes --cleanup-tag || true
-          gh release create "$TAG" \
-            --repo "$GITHUB_REPOSITORY" \
-            --target toolchain/lean-v4.33.0-release-20260824 \
-            --title 'Temporary verified Lean 4.33.0 core checker' \
-            --notes 'Installation transport only. Built by pruning the checksum-verified official Lean release. Delete after local acquisition.' \
-            core-lean-v4.33.0.tar.zst core-report.txt core-smoke.log SOURCE_URL.txt
+          cat > MetaSmoke.lean <<'EOF'
+          import Lean
+          import Std.Tactic.BVDecide
+          open Lean
+          theorem meta_smoke : (21 + 21 : Nat) = 42 := by decide
+          #check meta_smoke
+          EOF
+          "$LEAN_ROOT/bin/lean" MetaSmoke.lean > meta-smoke.log 2>&1
+          "$LEAN_ROOT/bin/lean" --version >> meta-smoke.log
+          "$LEAN_ROOT/bin/lean" --githash >> meta-smoke.log
+          cat meta-smoke.log
 
-      - name: Preserve as one-day Actions artifact when quota permits
-        continue-on-error: true
+      - name: Build the missing Lean/Std/Lake overlay
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p overlay/bin overlay/lib/lean overlay/include
+          cp -a "$LEAN_ROOT/bin/lake" overlay/bin/ 2>/dev/null || true
+          cp -a "$LEAN_ROOT/include/lean" overlay/include/ 2>/dev/null || true
+          for module in Lean Std Lake; do
+            if [ -d "$LEAN_ROOT/lib/lean/$module" ]; then
+              cp -a "$LEAN_ROOT/lib/lean/$module" overlay/lib/lean/
+            fi
+            find "$LEAN_ROOT/lib/lean" -maxdepth 1 \( -type f -o -type l \) \
+              -name "$module.olean*" -exec cp -a {} overlay/lib/lean/ \;
+            find "$LEAN_ROOT/lib/lean" -maxdepth 1 \( -type f -o -type l \) \
+              -name "lib${module}*" -exec cp -a {} overlay/lib/lean/ \;
+          done
+          cp "$LEAN_ROOT/LICENSE" overlay/ 2>/dev/null || true
+          tar --use-compress-program='zstd -15 -T0' -cf lean-v4.33.0-meta-overlay.tar.zst overlay
+          {
+            echo 'official_archive:'
+            stat -c 'bytes=%s' lean-4.33.0-linux.tar.zst
+            sha256sum lean-4.33.0-linux.tar.zst
+            echo
+            echo 'overlay:'
+            du -sh overlay overlay/lib/lean/Lean overlay/lib/lean/Std overlay/lib/lean/Lake 2>/dev/null || true
+            stat -c 'archive_bytes=%s' lean-v4.33.0-meta-overlay.tar.zst
+            sha256sum lean-v4.33.0-meta-overlay.tar.zst
+            echo
+            echo 'counts:'
+            find overlay/lib/lean -name '*.olean' | wc -l
+            find overlay/lib/lean -name '*.olean.server' | wc -l
+          } > meta-overlay-report.txt
+          cat meta-overlay-report.txt
+
+      - name: Fetch pinned lean-sail v4 source
+        shell: bash
+        run: |
+          set -euo pipefail
+          git clone --depth 1 --branch v4 https://github.com/rems-project/lean-sail.git lean-sail-v4
+          rm -rf lean-sail-v4/.git
+          printf '%s\n' 'tag=v4' 'tree=79b4d08505af29d88b3918f32d29840fae1fa191' > lean-sail-v4/PIN.txt
+          tar --use-compress-program='zstd -15 -T0' -cf lean-sail-v4-source.tar.zst lean-sail-v4
+          sha256sum lean-sail-v4-source.tar.zst > lean-sail-v4-source.sha256
+
+      - name: Upload Lean meta overlay
         uses: actions/upload-artifact@v4
         with:
-          name: core-lean-v4.33.0
-          path: core-lean-v4.33.0.tar.zst
+          name: lean-v4.33.0-meta-overlay
+          path: |
+            lean-v4.33.0-meta-overlay.tar.zst
+            meta-overlay-report.txt
+            meta-smoke.log
           compression-level: 0
           retention-days: 1
 
-      - name: Commit reproducible transport report
-        if: always()
-        shell: bash
-        run: |
-          set -euo pipefail
-          mkdir -p .toolchain-transport
-          cp core-report.txt core-smoke.log .toolchain-transport/
-          git config user.name 'toolchain-transport'
-          git config user.email 'actions@users.noreply.github.com'
-          git add .toolchain-transport/core-report.txt .toolchain-transport/core-smoke.log
-          if ! git diff --cached --quiet; then
-            git commit -m 'ci: record verified Init-only Lean checker'
-            git push origin HEAD:toolchain/lean-v4.33.0-release-20260824
-          fi
+      - name: Upload lean-sail source
+        uses: actions/upload-artifact@v4
+        with:
+          name: lean-sail-v4-source
+          path: |
+            lean-sail-v4-source.tar.zst
+            lean-sail-v4-source.sha256
+          compression-level: 0
+          retention-days: 1
