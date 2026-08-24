@@ -2,76 +2,6 @@ Official archive:
 bytes=574882764
 4b3fb03c29a1e0a253fb1d11f9bae3725f19a0dc6fc09b3ea16d2c9df3349e2c  lean-4.33.0-linux.tar.zst
 
-lib/lean immediate children:
-4.0K	unpack/lean-4.33.0-linux/lib/lean/Init.ilean
-4.0K	unpack/lean-4.33.0-linux/lib/lean/Init.ir.sig
-4.0K	unpack/lean-4.33.0-linux/lib/lean/Init.olean.private
-4.0K	unpack/lean-4.33.0-linux/lib/lean/Init.olean.server
-4.0K	unpack/lean-4.33.0-linux/lib/lean/Lake.ilean
-4.0K	unpack/lean-4.33.0-linux/lib/lean/Lake.ir
-4.0K	unpack/lean-4.33.0-linux/lib/lean/Lake.ir.sig
-4.0K	unpack/lean-4.33.0-linux/lib/lean/Lake.olean
-4.0K	unpack/lean-4.33.0-linux/lib/lean/Lake.olean.private
-4.0K	unpack/lean-4.33.0-linux/lib/lean/Lake.olean.server
-4.0K	unpack/lean-4.33.0-linux/lib/lean/LakeMain.ilean
-4.0K	unpack/lean-4.33.0-linux/lib/lean/LakeMain.ir
-4.0K	unpack/lean-4.33.0-linux/lib/lean/LakeMain.ir.sig
-4.0K	unpack/lean-4.33.0-linux/lib/lean/LakeMain.olean.private
-4.0K	unpack/lean-4.33.0-linux/lib/lean/LakeMain.olean.server
-4.0K	unpack/lean-4.33.0-linux/lib/lean/Lean.ilean
-4.0K	unpack/lean-4.33.0-linux/lib/lean/Lean.ir.sig
-4.0K	unpack/lean-4.33.0-linux/lib/lean/Lean.olean.private
-4.0K	unpack/lean-4.33.0-linux/lib/lean/Lean.olean.server
-4.0K	unpack/lean-4.33.0-linux/lib/lean/LeanIR.ir.sig
-4.0K	unpack/lean-4.33.0-linux/lib/lean/LeanIR.olean.server
-4.0K	unpack/lean-4.33.0-linux/lib/lean/Std.ilean
-4.0K	unpack/lean-4.33.0-linux/lib/lean/Std.ir
-4.0K	unpack/lean-4.33.0-linux/lib/lean/Std.ir.sig
-4.0K	unpack/lean-4.33.0-linux/lib/lean/Std.olean
-4.0K	unpack/lean-4.33.0-linux/lib/lean/Std.olean.private
-4.0K	unpack/lean-4.33.0-linux/lib/lean/Std.olean.server
-4.0K	unpack/lean-4.33.0-linux/lib/lean/libleanmanifest.a
-8.0K	unpack/lean-4.33.0-linux/lib/lean/Init.ir
-8.0K	unpack/lean-4.33.0-linux/lib/lean/Init.olean
-8.0K	unpack/lean-4.33.0-linux/lib/lean/Lean.ir
-8.0K	unpack/lean-4.33.0-linux/lib/lean/Lean.olean
-8.0K	unpack/lean-4.33.0-linux/lib/lean/Leanc.ilean
-8.0K	unpack/lean-4.33.0-linux/lib/lean/libInit_shared.so
-8.0K	unpack/lean-4.33.0-linux/lib/lean/libleanshared_1.so
-8.0K	unpack/lean-4.33.0-linux/lib/lean/libleanshared_2.so
-12K	unpack/lean-4.33.0-linux/lib/lean/LeanChecker.ilean
-12K	unpack/lean-4.33.0-linux/lib/lean/LeanIR.olean
-16K	unpack/lean-4.33.0-linux/lib/lean/LakeMain.olean
-24K	unpack/lean-4.33.0-linux/lib/lean/LeanIR.ilean
-44K	unpack/lean-4.33.0-linux/lib/lean/libLeanc.a
-60K	unpack/lean-4.33.0-linux/lib/lean/libLeanChecker.a
-256K	unpack/lean-4.33.0-linux/lib/lean/Leanc.olean
-284K	unpack/lean-4.33.0-linux/lib/lean/libLeanIR.a
-396K	unpack/lean-4.33.0-linux/lib/lean/LeanIR.ir
-432K	unpack/lean-4.33.0-linux/lib/lean/LeanChecker.olean
-1.1M	unpack/lean-4.33.0-linux/lib/lean/LeanIR.olean.private
-1.2M	unpack/lean-4.33.0-linux/lib/lean/libleanrt.a
-2.3M	unpack/lean-4.33.0-linux/lib/lean/libleancpp.a
-12M	unpack/lean-4.33.0-linux/lib/lean/libLake_shared.so
-20M	unpack/lean-4.33.0-linux/lib/lean/libLake.a
-26M	unpack/lean-4.33.0-linux/lib/lean/libInit.a
-30M	unpack/lean-4.33.0-linux/lib/lean/libStd.a
-107M	unpack/lean-4.33.0-linux/lib/lean/Lake
-219M	unpack/lean-4.33.0-linux/lib/lean/libleanshared.so
-300M	unpack/lean-4.33.0-linux/lib/lean/libLean.a
-346M	unpack/lean-4.33.0-linux/lib/lean/Std
-400M	unpack/lean-4.33.0-linux/lib/lean/Init
-1.3G	unpack/lean-4.33.0-linux/lib/lean/Lean
-
-lib/lean file suffix totals:
-.a: files=10 bytes=396064030
-.ilean: files=2485 bytes=86275825
-.ir: files=2483 bytes=371093536
-.ir.sig: files=2483 bytes=437008
-.olean: files=2485 bytes=353835848
-.so*: files=5 bytes=241527336
-<other>: files=4966 bytes=1378345304
-
 Checker selection:
 1.2G	checker
 lake 13840 bytes
@@ -101,5 +31,5 @@ libz.so.1 14 bytes
 libz.so.1.2.11 100640 bytes
 
 Checker compressed archive:
-bytes=218118415
-33b570e08f22c90aa851539e4fbac8abef7b2d84b5da096770603fb5f244b1c4  checker-lean-v4.33.0.tar.zst
+bytes=218118543
+cfa2b7d14f4b9799b166407ca9939189f7a8babdd565e4f758cbb0b697058659  checker-lean-v4.33.0.tar.zst
