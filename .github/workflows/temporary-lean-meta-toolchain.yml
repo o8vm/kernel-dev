@@ -1,0 +1,79 @@
+name: Temporary Lean 4.33 meta checker transport
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - .github/workflows/temporary-lean-meta-toolchain.yml
+
+permissions:
+  contents: read
+
+jobs:
+  transport-meta-checker:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Download and verify official Lean release
+        shell: bash
+        run: |
+          set -euo pipefail
+          URL='https://releases.lean-lang.org/lean4/v4.33.0/lean-4.33.0-linux.tar.zst'
+          EXPECTED='4b3fb03c29a1e0a253fb1d11f9bae3725f19a0dc6fc09b3ea16d2c9df3349e2c'
+          curl --fail --location --retry 5 --retry-all-errors "$URL" -o lean-4.33.0-linux.tar.zst
+          echo "$EXPECTED  lean-4.33.0-linux.tar.zst" | sha256sum -c -
+
+      - name: Construct and locally smoke-test meta-capable checker
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir unpack meta
+          tar --use-compress-program=unzstd -xf lean-4.33.0-linux.tar.zst -C unpack
+          ROOT=$(find unpack -mindepth 1 -maxdepth 1 -type d | head -n1)
+          mkdir -p meta/bin meta/lib/lean meta/include
+          cp -a "$ROOT/bin/lean" "$ROOT/bin/leanc" "$ROOT/bin/lake" meta/bin/
+          find "$ROOT/lib/lean" -maxdepth 1 \( -type f -o -type l \) \
+            \( -name '*.so' -o -name '*.so.*' -o -name '*.olean*' \) \
+            -exec cp -a {} meta/lib/lean/ \;
+          cd "$ROOT/lib/lean"
+          find . -type d -print0 | while IFS= read -r -d '' d; do
+            mkdir -p "$GITHUB_WORKSPACE/meta/lib/lean/$d"
+          done
+          find . -type f -name '*.olean*' -print0 | while IFS= read -r -d '' f; do
+            cp -a --parents "$f" "$GITHUB_WORKSPACE/meta/lib/lean"
+          done
+          cd "$GITHUB_WORKSPACE"
+          cp -a "$ROOT/include/lean" meta/include/
+          cp "$ROOT/LICENSE" meta/ 2>/dev/null || true
+
+          cat > MetaSmoke.lean <<'EOF'
+          import Lean
+          open Lean Meta
+          #check MetaM
+          #check getEnv
+          def ordinary (n : Nat) : Nat := n + 2
+          theorem ordinary_zero : ordinary 0 = 2 := by rfl
+          EOF
+          env LD_LIBRARY_PATH="$PWD/meta/lib/lean" meta/bin/lean MetaSmoke.lean \
+            > meta-smoke.log 2>&1
+          env LD_LIBRARY_PATH="$PWD/meta/lib/lean" meta/bin/lake --version \
+            >> meta-smoke.log 2>&1
+          tar --use-compress-program='zstd -19 -T0' -cf lean-v4.33.0-meta-checker.tar.zst meta
+          {
+            echo 'official_sha256=4b3fb03c29a1e0a253fb1d11f9bae3725f19a0dc6fc09b3ea16d2c9df3349e2c'
+            echo "archive_sha256=$(sha256sum lean-v4.33.0-meta-checker.tar.zst | cut -d' ' -f1)"
+            echo "archive_bytes=$(stat -c %s lean-v4.33.0-meta-checker.tar.zst)"
+            echo "olean_count=$(find meta/lib/lean -name '*.olean' | wc -l)"
+            echo "server_sidecar_count=$(find meta/lib/lean -name '*.olean.server' | wc -l)"
+            cat meta-smoke.log
+          } | tee meta-checker-report.txt
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: lean-v4.33.0-meta-checker
+          path: |
+            lean-v4.33.0-meta-checker.tar.zst
+            meta-checker-report.txt
+            meta-smoke.log
+          compression-level: 0
+          retention-days: 1
