@@ -1,0 +1,114 @@
+official_sha256=4b3fb03c29a1e0a253fb1d11f9bae3725f19a0dc6fc09b3ea16d2c9df3349e2c
+core_smoke_rc=1
+core_uncompressed_bytes=506157096
+core_archive_bytes=101026356
+core_archive_sha256=259e7ae4ef82192daee192fba2e9ccd458165951b50b1aae7888a0ab4dfcee9c
+init_olean_count=631
+init_ilean_count=631
+
+[smoke log]
+core/bin/lean: unrecognized option '--sysroot'
+Unknown command line option
+Lean (version 4.33.0, x86_64-unknown-linux-gnu, commit d8b18978322de05a8f3dba51ef03cf5461676c17, Release)
+Miscellaneous
+  -h, --help             display this message
+      --features         display features compiler provides (eg. LLVM support)
+  -v, --version          display version information
+  -V, --short-version    display short version number
+  -g, --githash          display the git commit hash number used to build this binary
+      --run <file>       call the 'main' definition in the given file with the remaining arguments
+  -o, --o=oname          create olean file
+  -i, --i=iname          create ilean file
+  -c, --c=fname          name of the C output file
+  -b, --bc=fname         name of the LLVM bitcode file
+      --stdin            take input from stdin
+  -R, --root=dir         set package root directory from which the module name
+
+                         of the input file is calculated
+
+                         (default: current working directory)
+
+  -t, --trust=num        trust level (default: max) 0 means do not trust any macro,
+
+                         and type check all imported modules
+
+  -q, --quiet            do not print verbose messages
+  -M, --memory=num       maximum amount of memory that should be used by Lean
+                         (in megabytes)
+  -T, --timeout=num      maximum number of memory allocations per task
+                         this is a deterministic way of interrupting long running tasks
+  -j, --threads=num      number of threads used to process lean files
+  -s, --tstack=num       thread stack size in Kb
+      --server           start lean in server mode
+      --worker           start lean in server-worker mode
+      --plugin=file[=fn] load and initialize Lean shared library for registering linters etc.
+      --load-dynlib=file load shared library to make its symbols available to the interpreter
+      --setup=file       JSON file with module setup data (supersedes the file's header)
+      --json             report Lean output (e.g., messages) as JSON (one per line)
+  -E, --error=kind       report Lean messages of kind as errors
+      --deps             just print dependencies of a Lean input
+      --src-deps         just print dependency sources of a Lean input
+      --print-prefix     print the installation prefix for Lean and exit
+      --print-libdir     print the installation directory for Lean's built-in libraries and exit
+      --profile          display elaboration/type checking time for each definition/theorem
+      --stats            display environment statistics
+      --incr-save=file   EXPERIMENTAL: save a full incremental snapshot of post-elaboration state at end of run
+      --incr-load=file   EXPERIMENTAL: reuse a snapshot saved by `--incr-(header-)save` at start of run
+      --incr-header-save=file
+                         EXPERIMENTAL: like `--incr-save`, but save only the header (state after importing)
+      -D name=value      set a configuration option (see set_option command)
+
+[dynamic dependencies]
+	linux-vdso.so.1 (0x00007f0315605000)
+	libInit_shared.so => /home/runner/work/kernel-dev/kernel-dev/core/bin/../lib/lean/libInit_shared.so (0x00007f03155f5000)
+	libleanshared_2.so => /home/runner/work/kernel-dev/kernel-dev/core/bin/../lib/lean/libleanshared_2.so (0x00007f03155f1000)
+	libleanshared_1.so => /home/runner/work/kernel-dev/kernel-dev/core/bin/../lib/lean/libleanshared_1.so (0x00007f03155ed000)
+	libleanshared.so => /home/runner/work/kernel-dev/kernel-dev/core/bin/../lib/lean/libleanshared.so (0x00007f030ba00000)
+	libc.so.6 => /lib/x86_64-linux-gnu/libc.so.6 (0x00007f030b600000)
+	libpthread.so.0 => /lib/x86_64-linux-gnu/libpthread.so.0 (0x00007f03155dc000)
+	libdl.so.2 => /lib/x86_64-linux-gnu/libdl.so.2 (0x00007f03155d7000)
+	libm.so.6 => /lib/x86_64-linux-gnu/libm.so.6 (0x00007f03154ee000)
+	/lib64/ld-linux-x86-64.so.2 (0x00007f0315607000)
+	librt.so.1 => /lib/x86_64-linux-gnu/librt.so.1 (0x00007f03154e9000)
+
+[largest files]
+229196736 core/lib/lean/libleanshared.so
+77258216 core/lib/libLLVM.so.22.1
+65075176 core/lib/libclang-cpp.so.22.1
+12311904 core/lib/lean/libLake_shared.so
+3393488 core/lib/lean/Init/Prelude.olean
+2772160 core/lib/lean/Init/Grind/Ring/CommSolver.olean
+2007768 core/lib/lean/Init/Data/List/Basic.olean
+1970208 core/lib/lean/Init/Data/UInt/Lemmas.olean
+1674720 core/lib/lean/Init/Core.olean
+1504264 core/lib/lean/Init/Data/SInt/Lemmas.olean
+1484632 core/lib/lean/Init/Data/List/Lemmas.olean
+1438432 core/lib/lean/Init/Data/Array/Lemmas.olean
+1337744 core/lib/libc++.so.1.0
+1234600 core/lib/lean/Init/Data/BitVec/Lemmas.olean
+1217400 core/lib/lean/Init/Data/Vector/Lemmas.olean
+1136736 core/lib/lean/Init/Data/Int/Linear.olean
+1064432 core/lib/lean/Init/Data/Range/Polymorphic/Lemmas.olean
+1032480 core/lib/lean/Init/Data/String/Basic.olean
+974920 core/lib/lean/Init/Tactics.olean
+966656 core/lib/lean/Init/Data/Order/PackageFactories.olean
+955064 core/lib/lean/Init/Data/Array/Basic.olean
+921136 core/lib/lean/Init/Data/String/Slice.olean
+900328 core/lib/lean/Init/Data/Iterators/Lemmas/Combinators/Monadic/FilterMap.olean
+867008 core/lib/lean/Init/System/IO.olean
+846720 core/lib/lean/Init/Data/List/Monadic.olean
+796424 core/lib/lean/Init/Data/List/Impl.olean
+773168 core/lib/lean/Init/Data/UInt/Bitwise.olean
+763504 core/lib/lean/Init/Grind/Ordered/Linarith.olean
+752552 core/lib/lean/Init/Data/BitVec/Bitblast.olean
+749352 core/lib/lean/Init/Notation.olean
+747776 core/lib/lean/Init/Data/Iterators/Consumers/Monadic/Loop.olean
+730425 core/lib/lean/Init/Data/SInt/Lemmas.ilean
+715384 core/lib/lean/Init/Data/Option/Lemmas.olean
+706384 core/lib/lean/Init/Data/Iterators/Basic.olean
+695384 core/lib/lean/Init/Data/Vector/Basic.olean
+671488 core/lib/lean/Init/Data/Iterators/Lemmas/Combinators/FilterMap.olean
+666767 core/lib/lean/Init/Data/UInt/Lemmas.ilean
+633224 core/lib/lean/Init/Data/Range/Polymorphic/RangeIterator.olean
+618864 core/lib/lean/Init/Meta/Defs.olean
+609136 core/lib/lean/Init/Grind/AC.olean
