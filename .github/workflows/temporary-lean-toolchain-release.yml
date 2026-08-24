@@ -15,13 +15,13 @@ env:
 jobs:
   transport:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.head_ref }}
 
-      - name: Download, verify, and split official Lean release
+      - name: Download and verify official Lean release
         shell: bash
         run: |
           set -euo pipefail
@@ -29,13 +29,43 @@ jobs:
           EXPECTED='4b3fb03c29a1e0a253fb1d11f9bae3725f19a0dc6fc09b3ea16d2c9df3349e2c'
           curl --fail --location --retry 5 --retry-all-errors "$URL" -o lean-4.33.0-linux.tar.zst
           echo "$EXPECTED  lean-4.33.0-linux.tar.zst" | sha256sum -c -
-          split --bytes=150M --numeric-suffixes=0 --suffix-length=2 \
-            lean-4.33.0-linux.tar.zst lean-4.33.0-linux.tar.zst.part-
-          sha256sum lean-4.33.0-linux.tar.zst lean-4.33.0-linux.tar.zst.part-* > SHA256SUMS
           printf '%s\n' "$URL" > SOURCE_URL.txt
-          ls -lh lean-4.33.0-linux.tar.zst.part-*
 
-      - name: Publish temporary release assets
+      - name: Measure a runtime-only local toolchain
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf unpack minimal
+          mkdir unpack minimal
+          tar --use-compress-program=unzstd -xf lean-4.33.0-linux.tar.zst -C unpack
+          ROOT=$(find unpack -mindepth 1 -maxdepth 1 -type d | head -n1)
+          mkdir -p minimal/bin minimal/lib
+          cp -a "$ROOT/bin/lean" "$ROOT/bin/lake" minimal/bin/
+          if [ -x "$ROOT/bin/leanc" ]; then cp -a "$ROOT/bin/leanc" minimal/bin/; fi
+          cp -a "$ROOT/lib/lean" minimal/lib/
+          find "$ROOT/lib" -maxdepth 1 -type f \( -name '*.so' -o -name '*.so.*' \) -exec cp -a {} minimal/lib/ \;
+          if [ -f "$ROOT/LICENSE" ]; then cp "$ROOT/LICENSE" minimal/; fi
+          tar --zstd -cf minimal-lean-v4.33.0.tar.zst minimal
+          {
+            echo 'Official archive:'
+            stat -c 'bytes=%s' lean-4.33.0-linux.tar.zst
+            sha256sum lean-4.33.0-linux.tar.zst
+            echo
+            echo 'Top-level extracted sizes:'
+            du -sh "$ROOT"/* | sort -h
+            echo
+            echo 'Minimal selection:'
+            du -sh minimal minimal/bin minimal/lib minimal/lib/lean
+            find minimal/bin -maxdepth 1 -type f -printf '%P %s bytes\n' | sort
+            find minimal/lib -maxdepth 1 -type f -printf '%P %s bytes\n' | sort
+            echo
+            echo 'Minimal compressed archive:'
+            stat -c 'bytes=%s' minimal-lean-v4.33.0.tar.zst
+            sha256sum minimal-lean-v4.33.0.tar.zst
+          } > minimal-toolchain-report.txt
+          cat minimal-toolchain-report.txt
+
+      - name: Refresh temporary release assets
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
@@ -45,23 +75,19 @@ jobs:
           gh release create "$TAG" \
             --repo "$GITHUB_REPOSITORY" \
             --title 'Temporary verified Lean v4.33.0 transport' \
-            --notes 'Installation transport only. Official Lean release verified before splitting. Delete after local installation.' \
-            lean-4.33.0-linux.tar.zst.part-* SHA256SUMS SOURCE_URL.txt
+            --notes 'Installation transport only. Official Lean release verified before pruning. Delete after local installation.' \
+            minimal-lean-v4.33.0.tar.zst minimal-toolchain-report.txt SOURCE_URL.txt
 
-      - name: Commit deterministic transport probe
+      - name: Commit transport report
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p .toolchain-transport
-          python3 - <<'PY'
-          from pathlib import Path
-          out = Path('.toolchain-transport/probe-2MiB.bin')
-          block = bytes(range(256))
-          out.write_bytes(block * (2 * 1024 * 1024 // len(block)))
-          PY
-          sha256sum .toolchain-transport/probe-2MiB.bin > .toolchain-transport/probe-2MiB.bin.sha256
+          cp minimal-toolchain-report.txt .toolchain-transport/
           git config user.name 'toolchain-transport'
           git config user.email 'actions@users.noreply.github.com'
-          git add .toolchain-transport
-          git commit -m 'ci: add temporary binary transport probe'
-          git push origin HEAD:${{ github.head_ref }}
+          git add .toolchain-transport/minimal-toolchain-report.txt
+          if ! git diff --cached --quiet; then
+            git commit -m 'ci: record minimal Lean toolchain size'
+            git push origin HEAD:${{ github.head_ref }}
+          fi
