@@ -1,0 +1,45 @@
+name: Temporary verified Lean toolchain transport
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - .github/workflows/temporary-lean-toolchain-release.yml
+
+permissions:
+  contents: write
+
+env:
+  TAG: temporary-lean-v4.33.0-20260824
+
+jobs:
+  transport:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Download, verify, and split official Lean release
+        shell: bash
+        run: |
+          set -euo pipefail
+          URL='https://releases.lean-lang.org/lean4/v4.33.0/lean-4.33.0-linux.tar.zst'
+          EXPECTED='4b3fb03c29a1e0a253fb1d11f9bae3725f19a0dc6fc09b3ea16d2c9df3349e2c'
+          curl --fail --location --retry 5 --retry-all-errors "$URL" -o lean-4.33.0-linux.tar.zst
+          echo "$EXPECTED  lean-4.33.0-linux.tar.zst" | sha256sum -c -
+          split --bytes=150M --numeric-suffixes=0 --suffix-length=2 \
+            lean-4.33.0-linux.tar.zst lean-4.33.0-linux.tar.zst.part-
+          sha256sum lean-4.33.0-linux.tar.zst lean-4.33.0-linux.tar.zst.part-* > SHA256SUMS
+          printf '%s\n' "$URL" > SOURCE_URL.txt
+          ls -lh lean-4.33.0-linux.tar.zst.part-*
+
+      - name: Publish temporary release assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh release delete "$TAG" --repo "$GITHUB_REPOSITORY" --yes --cleanup-tag || true
+          gh release create "$TAG" \
+            --repo "$GITHUB_REPOSITORY" \
+            --title 'Temporary verified Lean v4.33.0 transport' \
+            --notes 'Installation transport only. Official Lean release verified before splitting. Delete after local installation.' \
+            lean-4.33.0-linux.tar.zst.part-* SHA256SUMS SOURCE_URL.txt
