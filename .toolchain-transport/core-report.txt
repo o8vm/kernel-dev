@@ -1,12 +1,13 @@
 official_sha256=4b3fb03c29a1e0a253fb1d11f9bae3725f19a0dc6fc09b3ea16d2c9df3349e2c
-core_smoke_rc=1
-core_uncompressed_bytes=341092136
-core_archive_bytes=62277404
-core_archive_sha256=08bddc14481786d90bf715683018f49899615b8cc869cba686a78a83bce6acdd
+core_smoke_rc=0
+core_uncompressed_bytes=612209704
+core_archive_bytes=135538825
+core_archive_sha256=a44129f153f9dfffb78ed8ed0dc3ece741164b8e866e6b6fbe0b4667c440a1a2
 init_olean_count=631
+init_server_sidecar_count=631
 
 [smoke log]
-Smoke.lean:1:0: error: failed to open file '/home/runner/work/kernel-dev/kernel-dev/core/lib/lean/Init.olean.server': No such file or directory
+addTwo_three : addTwo 3 = 5
 Lean (version 4.33.0, x86_64-unknown-linux-gnu, commit d8b18978322de05a8f3dba51ef03cf5461676c17, Release)
 d8b18978322de05a8f3dba51ef03cf5461676c17
 
@@ -15,22 +16,24 @@ d8b18978322de05a8f3dba51ef03cf5461676c17
 /home/runner/work/kernel-dev/kernel-dev/core/lib/lean
 
 [dynamic dependencies]
-	linux-vdso.so.1 (0x00007f0c00e8f000)
-	libInit_shared.so => /home/runner/work/kernel-dev/kernel-dev/core/bin/../lib/lean/libInit_shared.so (0x00007f0c00e7f000)
-	libleanshared_2.so => /home/runner/work/kernel-dev/kernel-dev/core/bin/../lib/lean/libleanshared_2.so (0x00007f0c00e7b000)
-	libleanshared_1.so => /home/runner/work/kernel-dev/kernel-dev/core/bin/../lib/lean/libleanshared_1.so (0x00007f0c00e77000)
-	libleanshared.so => /home/runner/work/kernel-dev/kernel-dev/core/bin/../lib/lean/libleanshared.so (0x00007f0bf7400000)
-	libc.so.6 => /lib/x86_64-linux-gnu/libc.so.6 (0x00007f0bf7000000)
-	libpthread.so.0 => /lib/x86_64-linux-gnu/libpthread.so.0 (0x00007f0c00e66000)
-	libdl.so.2 => /lib/x86_64-linux-gnu/libdl.so.2 (0x00007f0c00e61000)
-	libm.so.6 => /lib/x86_64-linux-gnu/libm.so.6 (0x00007f0bf7317000)
-	/lib64/ld-linux-x86-64.so.2 (0x00007f0c00e91000)
-	librt.so.1 => /lib/x86_64-linux-gnu/librt.so.1 (0x00007f0c00e5c000)
+	linux-vdso.so.1 (0x00007f81da097000)
+	libInit_shared.so => /home/runner/work/kernel-dev/kernel-dev/core/bin/../lib/lean/libInit_shared.so (0x00007f81da087000)
+	libleanshared_2.so => /home/runner/work/kernel-dev/kernel-dev/core/bin/../lib/lean/libleanshared_2.so (0x00007f81da083000)
+	libleanshared_1.so => /home/runner/work/kernel-dev/kernel-dev/core/bin/../lib/lean/libleanshared_1.so (0x00007f81da07f000)
+	libleanshared.so => /home/runner/work/kernel-dev/kernel-dev/core/bin/../lib/lean/libleanshared.so (0x00007f81d0600000)
+	libc.so.6 => /lib/x86_64-linux-gnu/libc.so.6 (0x00007f81d0200000)
+	libpthread.so.0 => /lib/x86_64-linux-gnu/libpthread.so.0 (0x00007f81da06e000)
+	libdl.so.2 => /lib/x86_64-linux-gnu/libdl.so.2 (0x00007f81da069000)
+	libm.so.6 => /lib/x86_64-linux-gnu/libm.so.6 (0x00007f81d0517000)
+	/lib64/ld-linux-x86-64.so.2 (0x00007f81da099000)
+	librt.so.1 => /lib/x86_64-linux-gnu/librt.so.1 (0x00007f81da064000)
 
 [top-level lib/lean]
 d Init -> 
 d lean -> 
 f Init.olean -> 
+f Init.olean.private -> 
+f Init.olean.server -> 
 f libInit_shared.so -> 
 f libLake_shared.so -> 
 f libleanshared.so -> 
@@ -39,42 +42,42 @@ f libleanshared_2.so ->
 
 [largest files]
 229196736 core/lib/lean/libleanshared.so
+13009232 core/lib/lean/Init/Data/BitVec/Lemmas.olean.private
 12311904 core/lib/lean/libLake_shared.so
+7081560 core/lib/lean/Init/Data/Array/Lemmas.olean.private
+6441920 core/lib/lean/Init/Data/BitVec/Bitblast.olean.private
+5991160 core/lib/lean/Init/Data/Array/Extract.olean.private
+5048352 core/lib/lean/Init/Data/Int/DivMod/Lemmas.olean.private
+4976696 core/lib/lean/Init/Data/Iterators/Lemmas/Combinators/Monadic/FilterMap.olean.private
+4739400 core/lib/lean/Init/Data/Vector/Extract.olean.private
+4528352 core/lib/lean/Init/Data/List/Lemmas.olean.private
+4060416 core/lib/lean/Init/Data/Vector/Lemmas.olean.private
+3833296 core/lib/lean/Init/Data/Range/Polymorphic/RangeIterator.olean.private
+3748776 core/lib/lean/Init/Data/UInt/Lemmas.olean.private
 3393488 core/lib/lean/Init/Prelude.olean
+3388952 core/lib/lean/Init/Data/Range/Polymorphic/Lemmas.olean.private
+3261400 core/lib/lean/Init/Data/SInt/Lemmas.olean.private
+3120120 core/lib/lean/Init/Data/String/Lemmas/Pattern/String/ForwardSearcher.olean.private
+3058048 core/lib/lean/Init/Data/Nat/Lemmas.olean.private
+2786248 core/lib/lean/Init/Grind/Ring/CommSolver.olean.private
 2772160 core/lib/lean/Init/Grind/Ring/CommSolver.olean
+2748720 core/lib/lean/Init/Data/String/Basic.olean.private
+2467800 core/lib/lean/Init/Data/String/Decode.olean.private
+2393712 core/lib/lean/Init/Data/Int/Linear.olean.private
+2388984 core/lib/lean/Init/Data/List/ToArray.olean.private
+2346648 core/lib/lean/Init/Data/List/Find.olean.private
+2299888 core/lib/lean/Init/Data/Option/Lemmas.olean.private
+2100264 core/lib/lean/Init/Tactics.olean.private
 2007768 core/lib/lean/Init/Data/List/Basic.olean
+2005920 core/lib/lean/Init/Meta/Defs.olean.private
+1975288 core/lib/lean/Init/Data/Iterators/Lemmas/Consumers/Monadic/Loop.olean.private
 1970208 core/lib/lean/Init/Data/UInt/Lemmas.olean
+1967440 core/lib/lean/Init/Data/Int/LemmasAux.olean.private
+1961592 core/lib/lean/Init/Data/List/Sublist.olean.private
+1940888 core/lib/lean/Init/Data/UInt/Bitwise.olean.private
+1850416 core/lib/lean/Init/Data/Iterators/Lemmas/Combinators/FilterMap.olean.private
+1816056 core/lib/lean/Init/Data/Range/Polymorphic/NatLemmas.olean.private
+1806344 core/lib/lean/Init/Data/Range/Polymorphic/IntLemmas.olean.private
+1773048 core/lib/lean/Init/Notation.olean.private
+1737744 core/lib/lean/Init/Data/Dyadic/Basic.olean.private
 1674720 core/lib/lean/Init/Core.olean
-1504264 core/lib/lean/Init/Data/SInt/Lemmas.olean
-1484632 core/lib/lean/Init/Data/List/Lemmas.olean
-1438432 core/lib/lean/Init/Data/Array/Lemmas.olean
-1234600 core/lib/lean/Init/Data/BitVec/Lemmas.olean
-1217400 core/lib/lean/Init/Data/Vector/Lemmas.olean
-1136736 core/lib/lean/Init/Data/Int/Linear.olean
-1064432 core/lib/lean/Init/Data/Range/Polymorphic/Lemmas.olean
-1032480 core/lib/lean/Init/Data/String/Basic.olean
-974920 core/lib/lean/Init/Tactics.olean
-966656 core/lib/lean/Init/Data/Order/PackageFactories.olean
-955064 core/lib/lean/Init/Data/Array/Basic.olean
-921136 core/lib/lean/Init/Data/String/Slice.olean
-900328 core/lib/lean/Init/Data/Iterators/Lemmas/Combinators/Monadic/FilterMap.olean
-867008 core/lib/lean/Init/System/IO.olean
-846720 core/lib/lean/Init/Data/List/Monadic.olean
-796424 core/lib/lean/Init/Data/List/Impl.olean
-773168 core/lib/lean/Init/Data/UInt/Bitwise.olean
-763504 core/lib/lean/Init/Grind/Ordered/Linarith.olean
-752552 core/lib/lean/Init/Data/BitVec/Bitblast.olean
-749352 core/lib/lean/Init/Notation.olean
-747776 core/lib/lean/Init/Data/Iterators/Consumers/Monadic/Loop.olean
-715384 core/lib/lean/Init/Data/Option/Lemmas.olean
-706384 core/lib/lean/Init/Data/Iterators/Basic.olean
-695384 core/lib/lean/Init/Data/Vector/Basic.olean
-671488 core/lib/lean/Init/Data/Iterators/Lemmas/Combinators/FilterMap.olean
-633224 core/lib/lean/Init/Data/Range/Polymorphic/RangeIterator.olean
-618864 core/lib/lean/Init/Meta/Defs.olean
-609136 core/lib/lean/Init/Grind/AC.olean
-587928 core/lib/lean/Init/Data/SInt/Basic.olean
-570608 core/lib/lean/Init/Data/SInt/Bitwise.olean
-548976 core/lib/lean/Init/Data/Fin/Lemmas.olean
-540288 core/lib/lean/Init/Data/Range/Polymorphic/PRange.olean
-533336 core/lib/lean/Init/NotationExtra.olean
