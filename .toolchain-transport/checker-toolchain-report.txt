@@ -101,5 +101,5 @@ libz.so.1 14 bytes
 libz.so.1.2.11 100640 bytes
 
 Checker compressed archive:
-bytes=218118795
-baaf43a0009c62f5544ee7647777456df08d0ab8227a0eb246246397065555ba  checker-lean-v4.33.0.tar.zst
+bytes=218118415
+33b570e08f22c90aa851539e4fbac8abef7b2d84b5da096770603fb5f244b1c4  checker-lean-v4.33.0.tar.zst
