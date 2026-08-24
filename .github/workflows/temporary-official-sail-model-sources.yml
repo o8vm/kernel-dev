@@ -1,0 +1,65 @@
+name: Temporary official Sail model source transport
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - .github/workflows/temporary-official-sail-model-sources.yml
+
+permissions:
+  contents: read
+
+jobs:
+  sail-riscv-source:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Acquire pinned Sail-RISC-V source
+        shell: bash
+        run: |
+          set -euo pipefail
+          COMMIT='ac2a585506aad46b088b3594e56b8c21c52e297e'
+          git init sail-riscv
+          git -C sail-riscv remote add origin https://github.com/riscv/sail-riscv.git
+          git -C sail-riscv fetch --depth=1 origin "$COMMIT"
+          git -C sail-riscv checkout --detach FETCH_HEAD
+          test "$(git -C sail-riscv rev-parse HEAD)" = "$COMMIT"
+          rm -rf sail-riscv/.git
+          tar --sort=name --mtime='UTC 2026-08-24' --owner=0 --group=0 --numeric-owner \
+            -czf sail-riscv-${COMMIT}.tar.gz sail-riscv
+          sha256sum sail-riscv-${COMMIT}.tar.gz > sail-riscv-${COMMIT}.tar.gz.sha256
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sail-riscv-ac2a5855-source
+          path: |
+            sail-riscv-*.tar.gz
+            sail-riscv-*.tar.gz.sha256
+          compression-level: 0
+          retention-days: 1
+
+  sail-arm-source:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Acquire pinned Sail-Arm source
+        shell: bash
+        run: |
+          set -euo pipefail
+          COMMIT='1bf2e5574ba9d704639a28401b6a387dcb113cae'
+          git init sail-arm
+          git -C sail-arm remote add origin https://github.com/rems-project/sail-arm.git
+          git -C sail-arm fetch --depth=1 origin "$COMMIT"
+          git -C sail-arm checkout --detach FETCH_HEAD
+          test "$(git -C sail-arm rev-parse HEAD)" = "$COMMIT"
+          rm -rf sail-arm/.git
+          tar --sort=name --mtime='UTC 2026-08-24' --owner=0 --group=0 --numeric-owner \
+            -czf sail-arm-${COMMIT}.tar.gz sail-arm
+          sha256sum sail-arm-${COMMIT}.tar.gz > sail-arm-${COMMIT}.tar.gz.sha256
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sail-arm-1bf2e557-source
+          path: |
+            sail-arm-*.tar.gz
+            sail-arm-*.tar.gz.sha256
+          compression-level: 0
+          retention-days: 1
