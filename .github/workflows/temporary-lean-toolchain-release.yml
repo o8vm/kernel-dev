@@ -1,5 +1,5 @@
-# Installation transport only. No project build or proof runs here.
-name: Temporary full Lean 4.33 toolchain transport
+# Installation transport only. No compiler build or proof run occurs in CI.
+name: Temporary full Lean 4.29 toolchain transport
 
 on:
   pull_request:
@@ -19,47 +19,47 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          URL='https://releases.lean-lang.org/lean4/v4.33.0/lean-4.33.0-linux.tar.zst'
-          EXPECTED='4b3fb03c29a1e0a253fb1d11f9bae3725f19a0dc6fc09b3ea16d2c9df3349e2c'
-          curl --fail --location --retry 5 --retry-all-errors "$URL" -o lean-4.33.0-linux.tar.zst
-          echo "$EXPECTED  lean-4.33.0-linux.tar.zst" | sha256sum -c -
+          URL='https://releases.lean-lang.org/lean4/v4.29.0/lean-4.29.0-linux.tar.zst'
+          EXPECTED='089f7e513ed3e9436d191f4986330c0b53809c86b5997f5eb7f25550c374fa48'
+          curl --fail --location --retry 5 --retry-all-errors "$URL" -o lean-4.29.0-linux.tar.zst
+          echo "$EXPECTED  lean-4.29.0-linux.tar.zst" | sha256sum -c -
           split --bytes=250000000 --numeric-suffixes=0 --suffix-length=2 \
-            lean-4.33.0-linux.tar.zst lean-4.33.0-linux.tar.zst.part-
-          test -f lean-4.33.0-linux.tar.zst.part-00
-          test -f lean-4.33.0-linux.tar.zst.part-01
-          test -f lean-4.33.0-linux.tar.zst.part-02
-          sha256sum lean-4.33.0-linux.tar.zst lean-4.33.0-linux.tar.zst.part-* > SHA256SUMS
+            lean-4.29.0-linux.tar.zst lean-4.29.0-linux.tar.zst.part-
+          test -f lean-4.29.0-linux.tar.zst.part-00
+          test -f lean-4.29.0-linux.tar.zst.part-01
+          test -f lean-4.29.0-linux.tar.zst.part-02
+          sha256sum lean-4.29.0-linux.tar.zst lean-4.29.0-linux.tar.zst.part-* > SHA256SUMS
           printf '%s\n' "$URL" > SOURCE_URL.txt
-          stat -c '%n %s bytes' lean-4.33.0-linux.tar.zst.part-* | tee PART_SIZES.txt
+          stat -c '%n %s bytes' lean-4.29.0-linux.tar.zst.part-* | tee PART_SIZES.txt
 
       - name: Upload part 00
         uses: actions/upload-artifact@v4
         with:
-          name: lean-v4.33.0-full-part-00
-          path: lean-4.33.0-linux.tar.zst.part-00
+          name: lean-v4.29.0-full-part-00
+          path: lean-4.29.0-linux.tar.zst.part-00
           compression-level: 0
           retention-days: 1
 
       - name: Upload part 01
         uses: actions/upload-artifact@v4
         with:
-          name: lean-v4.33.0-full-part-01
-          path: lean-4.33.0-linux.tar.zst.part-01
+          name: lean-v4.29.0-full-part-01
+          path: lean-4.29.0-linux.tar.zst.part-01
           compression-level: 0
           retention-days: 1
 
       - name: Upload part 02
         uses: actions/upload-artifact@v4
         with:
-          name: lean-v4.33.0-full-part-02
-          path: lean-4.33.0-linux.tar.zst.part-02
+          name: lean-v4.29.0-full-part-02
+          path: lean-4.29.0-linux.tar.zst.part-02
           compression-level: 0
           retention-days: 1
 
       - name: Upload checksums
         uses: actions/upload-artifact@v4
         with:
-          name: lean-v4.33.0-full-metadata
+          name: lean-v4.29.0-full-metadata
           path: |
             SHA256SUMS
             SOURCE_URL.txt
