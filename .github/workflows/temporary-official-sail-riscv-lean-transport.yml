@@ -10,7 +10,7 @@ permissions:
   contents: read
 
 jobs:
-  transport:
+  transport-generated-model:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -34,16 +34,49 @@ jobs:
             > model/TRANSPORT_PROVENANCE.txt
           tar --sort=name --mtime='UTC 2026-08-20' --owner=0 --group=0 --numeric-owner \
             -czf opencompl-sail-riscv-lean-1ddd5bfa.tar.gz model
-          sha256sum opencompl-sail-riscv-lean-1ddd5bfa.tar.gz > SHA256SUMS
-          find model -type f -name '*.lean' | wc -l | tee LEAN_FILE_COUNT.txt
+          sha256sum opencompl-sail-riscv-lean-1ddd5bfa.tar.gz > MODEL_SHA256SUMS
+          find model -type f -name '*.lean' | wc -l | tee MODEL_LEAN_FILE_COUNT.txt
 
-      - name: Upload source transport
+      - name: Upload generated model source
         uses: actions/upload-artifact@v4
         with:
           name: opencompl-sail-riscv-lean-1ddd5bfa-source
           path: |
             opencompl-sail-riscv-lean-1ddd5bfa.tar.gz
-            SHA256SUMS
-            LEAN_FILE_COUNT.txt
+            MODEL_SHA256SUMS
+            MODEL_LEAN_FILE_COUNT.txt
+          compression-level: 0
+          retention-days: 1
+
+  transport-lean-sail-runtime:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Fetch pinned lean-sail v5 source
+        shell: bash
+        run: |
+          set -euo pipefail
+          REPO='https://github.com/rems-project/lean-sail.git'
+          REV='079463134b9c50450b8393e1566a09fc492a34d9'
+          git init runtime
+          git -C runtime remote add origin "$REPO"
+          git -C runtime fetch --depth=1 origin "$REV"
+          git -C runtime checkout --detach FETCH_HEAD
+          test "$(git -C runtime rev-parse HEAD)" = "$REV"
+          rm -rf runtime/.git
+          printf '%s\n' "repository=$REPO" "commit=$REV" 'role=Sail Lean support library v5' > runtime/TRANSPORT_PROVENANCE.txt
+          tar --sort=name --mtime='UTC 2026-07-20' --owner=0 --group=0 --numeric-owner \
+            -czf lean-sail-v5-07946313.tar.gz runtime
+          sha256sum lean-sail-v5-07946313.tar.gz > RUNTIME_SHA256SUMS
+          find runtime -type f -name '*.lean' | wc -l | tee RUNTIME_LEAN_FILE_COUNT.txt
+
+      - name: Upload lean-sail v5 source
+        uses: actions/upload-artifact@v4
+        with:
+          name: lean-sail-v5-07946313-source
+          path: |
+            lean-sail-v5-07946313.tar.gz
+            RUNTIME_SHA256SUMS
+            RUNTIME_LEAN_FILE_COUNT.txt
           compression-level: 0
           retention-days: 1
