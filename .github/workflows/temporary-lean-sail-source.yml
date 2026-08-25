@@ -1,4 +1,4 @@
-name: Temporary lean-sail v4 source transport
+name: Temporary current lean-sail source transport
 
 on:
   pull_request:
@@ -14,23 +14,26 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - name: Acquire exact lean-sail v4 source
+      - name: Acquire exact lean-sail main source
         shell: bash
         run: |
           set -euo pipefail
-          git clone --depth=1 --branch v4 https://github.com/rems-project/lean-sail.git lean-sail
-          git -C lean-sail rev-parse HEAD | tee lean-sail.commit
+          COMMIT='079463134b9c50450b8393e1566a09fc492a34d9'
+          git init lean-sail
+          git -C lean-sail remote add origin https://github.com/rems-project/lean-sail.git
+          git -C lean-sail fetch --depth=1 origin "$COMMIT"
+          git -C lean-sail checkout --detach FETCH_HEAD
+          test "$(git -C lean-sail rev-parse HEAD)" = "$COMMIT"
+          printf '%s\n' "$COMMIT" > lean-sail/UPSTREAM_COMMIT
           rm -rf lean-sail/.git
-          tar --sort=name --mtime='UTC 2026-08-24' --owner=0 --group=0 --numeric-owner \
-            -czf lean-sail-v4-source.tar.gz lean-sail
-          sha256sum lean-sail-v4-source.tar.gz | tee lean-sail-v4-source.tar.gz.sha256
-
+          tar --sort=name --mtime='UTC 2026-08-25' --owner=0 --group=0 --numeric-owner \
+            -czf lean-sail-main-${COMMIT}.tar.gz lean-sail
+          sha256sum lean-sail-main-${COMMIT}.tar.gz > lean-sail-main-${COMMIT}.tar.gz.sha256
       - uses: actions/upload-artifact@v4
         with:
-          name: lean-sail-v4-source
+          name: lean-sail-main-07946313-source
           path: |
-            lean-sail-v4-source.tar.gz
-            lean-sail-v4-source.tar.gz.sha256
-            lean-sail.commit
+            lean-sail-main-*.tar.gz
+            lean-sail-main-*.tar.gz.sha256
           compression-level: 0
           retention-days: 1
