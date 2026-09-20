@@ -63,10 +63,13 @@ def tensor (A : View) (B : A.Logical → View) : View :=
    fun ab v => ∃ x y, v = .pair x y ∧ A.Holds ab.1 x ∧
      (B ab.1).Holds ab.2 y ∧ Apart x y⟩
 
-/-- Both logical descriptions must concern exactly the SAME physical value. -/
+/-- Both descriptions concern exactly the SAME physical value. -/
 def overlay (A : View) (B : A.Logical → View) : View :=
   ⟨(a : A.Logical) × (B a).Logical,
     fun ab v => A.Holds ab.1 v ∧ (B ab.1).Holds ab.2 v⟩
+
+def refine (A : View) (P : A.Logical → Prop) : View :=
+  ⟨{a : A.Logical // P a}, fun a v => A.Holds a.val v⟩
 
 def erasedAll (I : Type) (B : I → View) : View :=
   ⟨(i : I) → (B i).Logical, fun f v => ∀ i, (B i).Holds (f i) v⟩
@@ -102,6 +105,32 @@ theorem dependent_curry {E A : View}
     intro a x ha hsep
     exact body ⟨e,a⟩ (.pair env x) ⟨env,x,rfl,he,ha,hsep⟩
 
+/-- Applying a represented dependent function is total on disjoint represented inputs. -/
+theorem dependent_apply {A : View} {B : A.Logical → View}
+    {f : (a : A.Logical) → (B a).Logical} {vf : Val}
+    (hf : (pi A B).Holds f vf)
+    {a : A.Logical} {x : Val} (hx : A.Holds a x) (ha : Apart vf x) :
+    Good .app (.pair vf x) (fun _ y => (B a).Holds (f a) y) := by
+  obtain ⟨p,env,rfl,h⟩ := hf
+  have hb := h a x hx (by simpa [Apart, Val.mass] using ha)
+  refine ⟨?_, ?_, ?_⟩
+  · apply Acc.intro
+    intro t ht
+    obtain ⟨event, hs⟩ := ht
+    cases hs
+    exact hb.1
+  · intro es t hp
+    cases hp with
+    | nil => exact Or.inr ⟨.quiet, .run p (.pair env x), .app p env x⟩
+    | cons hs tail =>
+      cases hs
+      exact hb.2.1 _ _ tail
+  · intro es y hp
+    cases hp with
+    | cons hs tail =>
+      cases hs
+      exact hb.2.2 _ _ tail
+
 /-- The same q works for all erased witnesses; no per-witness code choice. -/
 theorem eliminate_erased {I : Type} {B : I → View} {C : View}
     {q : Code} {f : (i : I) → (B i).Logical → C.Logical}
@@ -116,17 +145,49 @@ theorem same_run_intersection {p : Code} {x : Val}
     Good p x (fun es y => P es y ∧ Q es y) := by
   exact ⟨hp.1, hp.2.1, fun es y h => ⟨hp.2.2 es y h, hq.2.2 es y h⟩⟩
 
-/-- Resource preservation is inherited from the machine, not another type axiom. -/
+/-- Resource preservation is inherited from the machine, not a type-level assumption. -/
 theorem typed_prefix_unique {p : Code} {x : Val} {A : View}
     {B : A.Logical → View} {f : (a : A.Logical) → (B a).Logical}
     (_hp : Implements p A B f) (hx : Unique (.run p x))
     {es : List Event} {t : Task} (h : Prefix (.run p x) es t) : Unique t :=
   unique_at_every_prefix hx h
 
+def natView : View := ⟨Nat, fun n v => v = .nat n⟩
+def tokenView (k : Nat) : View := ⟨Unit, fun _ v => v = .token k⟩
+
+theorem identity_refine (A : View) :
+    Implements .skip A (fun a => refine A (fun b => b = a)) (fun a => ⟨a,rfl⟩) := by
+  intro a x hx
+  apply primitive_good (event := .quiet) (y := x)
+  · intro event t
+    constructor
+    · intro hs; cases hs; exact ⟨rfl,rfl⟩
+    · rintro ⟨rfl,rfl⟩; exact .skip x
+  · exact hx
+
+/-- The result type specifies both the captured owner and the actual numeric argument. -/
+def ownedResult (k n : Nat) : View :=
+  refine (tensor (tokenView k) (fun _ => natView)) (fun pair => pair = ⟨(),n⟩)
+
+theorem owned_closure_total (k : Nat) :
+    (pi natView (ownedResult k)).Holds (fun n => ⟨⟨(),n⟩,rfl⟩)
+      (.closure .skip (.token k)) := by
+  refine ⟨.skip, .token k, rfl, ?_⟩
+  intro n x hx ha
+  apply primitive_good (event := .quiet) (y := .pair (.token k) x)
+  · intro event t
+    constructor
+    · intro hs; cases hs; exact ⟨rfl,rfl⟩
+    · rintro ⟨rfl,rfl⟩; exact .skip _
+  · exact ⟨.token k,x,rfl,rfl,hx,ha⟩
+
 #print axioms primitive_good
 #print axioms dependent_curry
+#print axioms dependent_apply
 #print axioms eliminate_erased
 #print axioms same_run_intersection
 #print axioms typed_prefix_unique
+#print axioms identity_refine
+#print axioms owned_closure_total
 end Dependent
 end ResourcePrefix
