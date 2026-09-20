@@ -47,13 +47,17 @@ jobs:
             exit 1
           fi
           export LD_LIBRARY_PATH="$PWD/meta/lib/lean"
-          meta/bin/lean verification/ResourcePrefix.lean 2>&1 | tee verification/verification.log
+          export LEAN_PATH="$PWD/verification"
+          : > verification/verification.log
+          meta/bin/lean -o verification/ResourcePrefix.olean verification/ResourcePrefix.lean 2>&1 | tee -a verification/verification.log
+          meta/bin/lean -o verification/Examples.olean verification/Examples.lean 2>&1 | tee -a verification/verification.log
           if grep -E 'sorryAx|Lean.ofReduceBool|Lean.trustCompiler' verification/verification.log; then
             exit 1
           fi
+          python3 verification/check_mutations.py "$PWD/meta/bin/lean"
           git rev-parse HEAD > verification/checked-commit.txt
           sha256sum verification/*.lean > verification/checked-sources.sha256
-          echo 'Kernel check completed with exit code 0.' | tee verification/status.txt
+          echo 'Kernel checks passed; both negative mutations rejected.' | tee verification/status.txt
       - name: Preserve exact sources and verification evidence
         if: always()
         uses: actions/upload-artifact@v4
