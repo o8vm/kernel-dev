@@ -49,8 +49,9 @@ jobs:
           export LD_LIBRARY_PATH="$PWD/meta/lib/lean"
           export LEAN_PATH="$PWD/verification"
           : > verification/verification.log
-          meta/bin/lean -o verification/ResourcePrefix.olean verification/ResourcePrefix.lean 2>&1 | tee -a verification/verification.log
-          meta/bin/lean -o verification/Examples.olean verification/Examples.lean 2>&1 | tee -a verification/verification.log
+          for MODULE in ResourcePrefix Examples DependentRealization; do
+            meta/bin/lean -o "verification/$MODULE.olean" "verification/$MODULE.lean" 2>&1 | tee -a verification/verification.log
+          done
           if grep -E 'sorryAx|Lean.ofReduceBool|Lean.trustCompiler' verification/verification.log; then
             exit 1
           fi
