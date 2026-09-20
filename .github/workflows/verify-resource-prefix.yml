@@ -1,0 +1,63 @@
+name: Verify resource-prefix proof
+
+on:
+  push:
+    branches: [verification/resource-prefix-20260920]
+    paths:
+      - verification/**
+      - .github/workflows/verify-resource-prefix.yml
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download the already verified Lean toolchain artifact
+        uses: actions/download-artifact@v4
+        with:
+          artifact-ids: '10599751801'
+          run-id: '32803601866'
+          repository: o8vm/kernel-dev
+          github-token: ${{ github.token }}
+          path: .lean-input
+      - name: Authenticate and extract toolchain
+        shell: bash
+        run: |
+          set -euo pipefail
+          ARCHIVE=$(find .lean-input -name 'lean-v4.33.0-meta-checker.tar.zst' -type f -print -quit)
+          REPORT=$(find .lean-input -name 'meta-checker-report.txt' -type f -print -quit)
+          test -n "$ARCHIVE"
+          test -n "$REPORT"
+          EXPECTED=$(sed -n 's/^archive_sha256=//p' "$REPORT")
+          echo "$EXPECTED  $ARCHIVE" | sha256sum -c -
+          cp "$REPORT" verification/toolchain-report.txt
+          tar --zstd -xf "$ARCHIVE"
+          meta/bin/lean --version | tee verification/lean-version.txt
+      - name: Kernel-check candidate and report axiom dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          if grep -nE '\b(sorry|admit|axiom|unsafe|native_decide)\b' verification/*.lean; then
+            echo 'Forbidden proof escape or custom axiom found.'
+            exit 1
+          fi
+          export LD_LIBRARY_PATH="$PWD/meta/lib/lean"
+          meta/bin/lean verification/ResourcePrefix.lean 2>&1 | tee verification/verification.log
+          if grep -E 'sorryAx|Lean.ofReduceBool|Lean.trustCompiler' verification/verification.log; then
+            exit 1
+          fi
+          git rev-parse HEAD > verification/checked-commit.txt
+          sha256sum verification/*.lean > verification/checked-sources.sha256
+          echo 'Kernel check completed with exit code 0.' | tee verification/status.txt
+      - name: Preserve exact sources and verification evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: resource-prefix-verification
+          path: verification/
+          retention-days: 7
